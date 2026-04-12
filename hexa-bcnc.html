@@ -452,7 +452,7 @@ textarea.fta{resize:none;line-height:1.6;}
 <!-- HEADER -->
 <div class="hdr">
   <div style="display:flex;align-items:center;gap:10px;">
-    <img src="" id="hdr-hexa-logo" style="height:28px;object-fit:contain;cursor:pointer;" onclick="if(currentUserRole==='agence')showView('agence')" alt="HEXA">
+    <img src="" id="hdr-hexa-logo" style="height:40px;object-fit:contain;cursor:pointer;" onclick="if(currentUserRole==='agence')showView('agence')" alt="HEXA">
     <div style="width:1px;height:20px;background:var(--bd);"></div>
     <div>
       <div id="hdr-entity-name" style="font-size:11px;font-weight:600;color:var(--dark);letter-spacing:.3px;">Groupe BCNC</div>
@@ -1087,12 +1087,18 @@ const MSAL_CONFIG = {
   auth: {
     clientId:  SP_CONFIG.clientId,
     authority: `https://login.microsoftonline.com/${SP_CONFIG.tenantId}`,
-    redirectUri: 'https://chipper-begonia-f24e03.netlify.app'
+    redirectUri: 'https://bannequin.github.io/hexa/'
   },
   cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
 };
 
-const SP_SCOPES = ['https://graph.microsoft.com/Sites.ReadWrite.All', 'https://graph.microsoft.com/User.Read', 'https://graph.microsoft.com/Calendars.ReadWrite', 'offline_access'];
+const SP_SCOPES = [
+  'https://graph.microsoft.com/Sites.ReadWrite.All',
+  'https://graph.microsoft.com/Sites.FullControl.All',
+  'https://graph.microsoft.com/User.Read',
+  'https://graph.microsoft.com/Calendars.ReadWrite',
+  'offline_access'
+];
 
 let msalInstance = null;
 let spAccount    = null;
@@ -1127,28 +1133,26 @@ function initMSAL() {
   }
 }
 
-// ── CONNEXION ──
+// ── CONNEXION — redirect uniquement (plus fiable) ──
 async function spSignIn() {
   if (spAccount) { spSignOut(); return; }
   if (!msalInstance) {
-    showToastMsg('Connexion Microsoft en cours d\'initialisation, réessayez dans 2 secondes.', 'warn');
+    const ls = document.getElementById('login-status');
+    if(ls) ls.textContent = 'Initialisation en cours, réessayez dans 2 secondes…';
     initMSAL();
     return;
   }
   try {
-    setSpDot('connecting');
-    try {
-      const resp = await msalInstance.loginPopup({ scopes: SP_SCOPES });
-      await spOnSignedIn(resp.account, resp.accessToken);
-    } catch(e) {
-      if (e.errorCode === 'popup_window_error' || e.errorCode === 'user_cancelled') {
-        await msalInstance.loginRedirect({ scopes: SP_SCOPES });
-      } else throw e;
-    }
+    const ls = document.getElementById('login-status');
+    if(ls) ls.textContent = 'Redirection vers Microsoft…';
+    const lb = document.getElementById('login-btn');
+    if(lb) lb.disabled = true;
+    await msalInstance.loginRedirect({ scopes: SP_SCOPES });
   } catch(e) {
     console.error('Sign in error:', e);
-    setSpDot('error');
-    showToastMsg('Connexion Microsoft échouée : ' + (e.message || e), 'err');
+    showLoginError('Connexion Microsoft échouée : ' + (e.message || e));
+    const lb = document.getElementById('login-btn');
+    if(lb) lb.disabled = false;
   }
 }
 
