@@ -25,10 +25,12 @@
   --num:'Space Grotesk',sans-serif;
 }
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;}
-.app{max-width:860px;margin:0 auto;padding:16px 16px 60px;}
+.app{max-width:780px;width:66%;margin:0 auto;padding:16px 16px 60px;}
+@media(max-width:1024px){.app{width:88%;}}
+@media(max-width:640px){.app{width:100%;padding:10px 10px 60px;}}
 
 /* ── HEADER ── */
-.hdr{background:var(--white);border-radius:16px;border:1px solid var(--bd);padding:13px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.hdr{background:var(--white);border-radius:16px;border:1px solid var(--bd);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
 .logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;}
 .logo em{color:var(--cyan);font-style:normal;}
 .logo-sub{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:1px;}
@@ -452,7 +454,7 @@ textarea.fta{resize:none;line-height:1.6;}
 <!-- HEADER -->
 <div class="hdr">
   <div style="display:flex;align-items:center;gap:10px;">
-    <img src="" id="hdr-hexa-logo" style="height:40px;object-fit:contain;cursor:pointer;" onclick="if(currentUserRole==='agence')showView('agence')" alt="HEXA">
+    <img src="" id="hdr-hexa-logo" style="height:52px;object-fit:contain;cursor:pointer;" onclick="if(currentUserRole==='agence')showView('agence')" alt="HEXA">
     <div style="width:1px;height:20px;background:var(--bd);"></div>
     <div>
       <div id="hdr-entity-name" style="font-size:11px;font-weight:600;color:var(--dark);letter-spacing:.3px;">Groupe BCNC</div>
