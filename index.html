@@ -24,13 +24,13 @@
   --pur:#6c5ce7;--pbg:#f0eeff;--pbd:#c4b8f8;
   --num:'Space Grotesk',sans-serif;
 }
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;font-size:16px;}
 .app{max-width:780px;width:66%;margin:0 auto;padding:16px 16px 60px;}
 @media(max-width:1024px){.app{width:88%;}}
 @media(max-width:640px){.app{width:100%;padding:10px 10px 60px;}}
 
 /* ── HEADER ── */
-.hdr{background:var(--white);border-radius:16px;border:1px solid var(--bd);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.hdr{background:var(--white);border-radius:16px;border:1px solid var(--bd);padding:10px 22px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
 .logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;}
 .logo em{color:var(--cyan);font-style:normal;}
 .logo-sub{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:1px;}
@@ -86,7 +86,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--dark);min
 
 /* ── TABS ── */
 .mode-tabs{display:flex;gap:4px;background:var(--bg);border-radius:12px;padding:4px;margin-bottom:16px;}
-.mode-tab{flex:1;padding:9px 6px;border-radius:9px;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);border:none;background:transparent;font-family:'DM Sans',sans-serif;transition:all .2s;text-align:center;}
+.mode-tab{flex:1;padding:9px 6px;border-radius:9px;cursor:pointer;font-size:15px;font-weight:500;color:var(--muted);border:none;background:transparent;font-family:'DM Sans',sans-serif;transition:all .2s;text-align:center;}
 .mode-tab.active{background:var(--white);color:var(--dark);box-shadow:0 1px 4px rgba(0,0,0,.08);}
 
 /* ── FORM ── */
@@ -108,7 +108,7 @@ textarea.fta{resize:none;line-height:1.6;}
 .pdf-remove{background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;margin-left:auto;}
 
 /* ── BUTTONS ── */
-.btn{padding:12px 18px;border-radius:12px;border:none;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:7px;}
+.btn{padding:13px 20px;border-radius:12px;border:none;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:7px;}
 .btn-cyan{background:var(--cyan);color:#fff;}
 .btn-cyan:hover{background:#22a8c2;}
 .btn-dark{background:var(--dark);color:#fff;}
@@ -146,8 +146,8 @@ textarea.fta{resize:none;line-height:1.6;}
 .ii-bar.normale{background:var(--ora);}
 .ii-bar.preventive{background:var(--grn);}
 .ii-body{flex:1;}
-.ii-client{font-size:14px;font-weight:600;}
-.ii-meta{font-size:12px;color:var(--muted);margin-top:2px;}
+.ii-client{font-size:15px;font-weight:600;}
+.ii-meta{font-size:13px;color:var(--muted);margin-top:2px;}
 .ii-right{text-align:right;flex-shrink:0;}
 .status-pill{font-size:10px;font-weight:500;padding:3px 9px;border-radius:10px;display:inline-block;margin-bottom:3px;}
 .status-pill.planif{background:var(--cl);color:var(--cyan);border:1px solid var(--cb);}
@@ -302,7 +302,7 @@ textarea.fta{resize:none;line-height:1.6;}
 
 .err-box{background:var(--rbg);border:1px solid var(--rbd);border-radius:12px;padding:12px 15px;margin-bottom:12px;font-size:13px;color:var(--red);}
 .info-box{background:var(--cl);border:1px solid var(--cb);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;gap:9px;font-size:12px;color:#1a6d7e;line-height:1.6;}
-.section-lbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--hint);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.section-lbl{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--hint);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
 .section-lbl::after{content:'';flex:1;height:1px;background:var(--bd);}
 
 /* ── NOTIFICATION BADGE ── */
@@ -454,12 +454,12 @@ textarea.fta{resize:none;line-height:1.6;}
 <!-- HEADER -->
 <div class="hdr">
   <div style="display:flex;align-items:center;gap:10px;">
-    <img src="" id="hdr-hexa-logo" style="height:52px;object-fit:contain;cursor:pointer;" onclick="if(currentUserRole==='agence')showView('agence')" alt="HEXA">
-    <div style="width:1px;height:20px;background:var(--bd);"></div>
+    <img src="" id="hdr-hexa-logo" style="height:72px;object-fit:contain;cursor:pointer;" onclick="if(currentUserRole==='agence')showView('agence')" alt="HEXA">
+    <div style="width:1px;height:28px;background:var(--bd);"></div>
     <div>
-      <div id="hdr-entity-name" style="font-size:11px;font-weight:600;color:var(--dark);letter-spacing:.3px;">Groupe BCNC</div>
+      <div id="hdr-entity-name" style="font-size:13px;font-weight:700;color:var(--dark);letter-spacing:.3px;">Groupe BCNC</div>
     </div>
-    <div id="hdr-entity-dot" style="width:7px;height:7px;border-radius:50%;background:#2abbda;flex-shrink:0;transition:background .3s;"></div>
+    <div id="hdr-entity-dot" style="width:9px;height:9px;border-radius:50%;background:#2abbda;flex-shrink:0;transition:background .3s;"></div>
   </div>
   <div class="hdr-right" style="display:flex;align-items:center;gap:6px;">
     <!-- Navigation agence (visible seulement rôle agence) -->
@@ -790,7 +790,7 @@ textarea.fta{resize:none;line-height:1.6;}
   </div>
 
   <!-- ── LIGNE 2 : FORMULAIRE + PANNEAU DROIT ── -->
-  <div style="display:grid;grid-template-columns:1fr 300px;gap:14px;align-items:start;">
+  <div style="display:grid;grid-template-columns:1fr 260px;gap:14px;align-items:start;">
 
     <!-- Colonne gauche : saisie + IA -->
     <div>
