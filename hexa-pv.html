@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HEXA — PV de Réception</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/msal.js/2.38.3/msal-browser.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:#f5f6f8;color:#12161c;min-height:100vh;-webkit-font-smoothing:antialiased;}
+.page{max-width:680px;margin:0 auto;padding:20px 16px 80px;}
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-card{background:#fff;border-radius:20px;border:1px solid #e3e8ec;padding:40px 36px;max-width:420px;width:100%;text-align:center;}
+.login-logo{font-family:'Syne',sans-serif;font-size:42px;font-weight:800;color:#12161c;letter-spacing:-2px;margin-bottom:6px;}
+.login-logo span{color:#6c5ce7;}
+.login-sub{font-size:14px;color:#7a8d97;margin-bottom:8px;}
+.login-module{font-size:13px;font-weight:600;color:#6c5ce7;background:#f0eeff;border:1px solid #c4b8f8;border-radius:20px;padding:4px 14px;display:inline-block;margin-bottom:28px;}
+.login-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#12161c;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;}
+#login-msg{font-size:12px;color:#7a8d97;margin-top:12px;}
+#login-err{font-size:12px;color:#e04444;margin-top:8px;display:none;}
+#app-screen{display:none;}
+.hdr{background:#12161c;border-radius:16px;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;letter-spacing:-1px;}
+.logo span{color:#6c5ce7;}
+.av{width:34px;height:34px;border-radius:50%;background:rgba(108,92,231,.2);border:1px solid rgba(108,92,231,.3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#a29af0;flex-shrink:0;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-pur{background:#6c5ce7;color:#fff;}
+.btn-pur:hover{background:#5a4bd1;}
+.btn-outline{background:#fff;color:#12161c;border:1.5px solid #e3e8ec;}
+.btn-outline:hover{border-color:#aab8c0;}
+.btn-full{width:100%;justify-content:center;}
+.btn-grn{background:#2a9d6f;color:#fff;}
+.card{background:#fff;border-radius:14px;border:1px solid #e3e8ec;padding:20px;margin-bottom:12px;}
+.card-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#12161c;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.dot{width:8px;height:8px;border-radius:50%;background:#6c5ce7;display:inline-block;}
+.field{margin-bottom:12px;}
+.field label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;display:block;margin-bottom:5px;}
+.field input,.field textarea,.field select{width:100%;padding:10px 14px;border:1.5px solid #e3e8ec;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;color:#12161c;}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:#6c5ce7;}
+.field textarea{height:70px;resize:vertical;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
+.photo-thumb{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#f5f6f8;}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.photo-thumb .del{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;border:none;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.photo-add{display:flex;flex-direction:column;align-items:center;justify-content:center;aspect-ratio:1;border-radius:8px;border:2px dashed #c4b8f8;background:#f0eeff;cursor:pointer;gap:4px;font-size:11px;font-weight:600;color:#6c5ce7;}
+.photo-add input{display:none;}
+.reserve-item{display:flex;align-items:flex-start;gap:10px;padding:12px;background:#f8fafc;border-radius:10px;margin-bottom:8px;border:1px solid #e3e8ec;}
+.rsv-num{width:24px;height:24px;border-radius:50%;background:#f0eeff;color:#6c5ce7;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.g-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
+.g-card{background:#eaf7f1;border:1px solid #a8dfc5;border-radius:10px;padding:12px;text-align:center;}
+.sig-container{border:2px dashed #c4b8f8;border-radius:12px;position:relative;overflow:hidden;background:#fff;}
+.sig-canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
+.sig-clear{position:absolute;top:8px;right:8px;background:rgba(108,92,231,.1);color:#6c5ce7;border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;}
+.sig-label{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;color:#aab8c0;pointer-events:none;white-space:nowrap;}
+
+/* LISTE PV */
+.pv-item{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #e3e8ec;cursor:pointer;}
+.pv-item:last-child{border-bottom:none;}
+.pv-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.pv-status{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#12161c;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+
+/* VIEWS */
+.view{display:none;}
+.view.active{display:block;}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">HE<span>X</span>A</div>
+    <div class="login-sub">Groupe BCNC</div>
+    <div class="login-module">📋 PV de réception</div>
+    <button class="login-btn" onclick="doLogin()">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="1" y="1" width="8" height="8" fill="#F25022"/><rect x="11" y="1" width="8" height="8" fill="#7FBA00"/><rect x="1" y="11" width="8" height="8" fill="#00A4EF"/><rect x="11" y="11" width="8" height="8" fill="#FFB900"/></svg>
+      Se connecter avec Microsoft 365
+    </button>
+    <div id="login-msg"></div>
+    <div id="login-err"></div>
+  </div>
+</div>
+
+<div id="app-screen">
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <a href="hexa-accueil.html" style="color:#7a8d97;font-size:18px;text-decoration:none;">←</a>
+      <div class="logo">HE<span>X</span>A <span style="font-size:13px;font-weight:500;color:#7a8d97;">PV de réception</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div style="text-align:right;">
+        <div style="font-size:13px;font-weight:500;color:#fff;" id="hdr-name">—</div>
+        <div style="font-size:10px;color:#7a8d97;" id="hdr-role">—</div>
+      </div>
+      <div class="av" id="hdr-av">?</div>
+    </div>
+  </div>
+
+  <!-- VUE LISTE -->
+  <div class="view active" id="view-list">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;">Procès-verbaux</div>
+        <div style="font-size:13px;color:#7a8d97;margin-top:2px;" id="pv-count">—</div>
+      </div>
+      <button class="btn btn-pur" onclick="openNewPV()">+ Nouveau PV</button>
+    </div>
+    <div class="card">
+      <div id="pv-list"><div style="text-align:center;padding:32px;font-size:13px;color:#7a8d97;">Aucun PV créé</div></div>
+    </div>
+  </div>
+
+  <!-- VUE FORMULAIRE -->
+  <div class="view" id="view-form">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <button class="btn btn-outline" onclick="showList()" style="padding:8px 14px;">← Retour</button>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;" id="form-title">Nouveau PV</div>
+    </div>
+
+    <!-- SECTION 1 : PARTIES -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Identification</div>
+      <div class="row2">
+        <div class="field"><label>Client / Donneur d'ordre</label><input type="text" id="pv-client" placeholder="Heurtier Voiron"></div>
+        <div class="field"><label>Représentant client</label><input type="text" id="pv-representant" placeholder="Marc Delorme"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Qualité du représentant</label><input type="text" id="pv-qualite" placeholder="Syndic de copropriété"></div>
+        <div class="field"><label>Date de réception</label><input type="date" id="pv-date"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Chantier / Résidence</label><input type="text" id="pv-chantier" placeholder="Résidence Les Pins"></div>
+        <div class="field"><label>Adresse</label><input type="text" id="pv-adresse" placeholder="10 Grande Rue, 38500 Voiron"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Entreprise</label>
+          <select id="pv-entreprise">
+            <option value="">— Sélectionner —</option>
+          </select>
+        </div>
+        <div class="field"><label>Technicien / Représentant</label><input type="text" id="pv-tech" placeholder="Irid Abdelkader"></div>
+      </div>
+      <div class="field"><label>Référence devis / marché</label><input type="text" id="pv-ref-devis" placeholder="DEV-2026-0089"></div>
+    </div>
+
+    <!-- SECTION 2 : TRAVAUX -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Travaux réalisés</div>
+      <div class="field"><textarea id="pv-travaux" style="height:90px;" placeholder="Reprise complète de l'étanchéité en toiture-terrasse — membrane bitumineuse SBS, isolation 120mm..."></textarea></div>
+    </div>
+
+    <!-- SECTION 3 : PHOTOS -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Photos de réalisation</div>
+      <div style="font-size:12px;color:#7a8d97;margin-bottom:10px;">Photographiez l'état final des travaux (vue générale, détails, points singuliers)</div>
+      <div class="photo-grid" id="pv-photo-grid"></div>
+    </div>
+
+    <!-- SECTION 4 : RÉSERVES -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Réserves</div>
+      <div style="font-size:12px;color:#7a8d97;margin-bottom:12px;">Laissez vide si réception sans réserve.</div>
+      <div id="pv-reserves-list"></div>
+      <button class="btn btn-outline" onclick="addReserve()" style="margin-top:8px;font-size:12px;padding:8px 14px;">+ Ajouter une réserve</button>
+      <div id="no-reserve" style="display:none;margin-top:10px;padding:10px 14px;background:#eaf7f1;border:1px solid #a8dfc5;border-radius:10px;font-size:12px;color:#1a5740;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="pv-sans-reserve" onchange="toggleSansReserve(this)">
+          Réception sans réserve — les travaux sont conformes à la commande
+        </label>
+      </div>
+    </div>
+
+    <!-- SECTION 5 : GARANTIES -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Garanties légales</div>
+      <div style="font-size:12px;color:#7a8d97;margin-bottom:4px;">Calculées automatiquement depuis la date de réception — art. 1792 et 1792-6 Code civil</div>
+      <div class="g-cards" id="pv-garanties">
+        <div class="g-card"><div style="font-size:11px;font-weight:600;color:#1a5740;">Parfait achèvement</div><div style="font-size:22px;font-weight:700;color:#2a9d6f;margin:4px 0;">1 an</div><div style="font-size:11px;color:#1a5740;" id="g1">—</div></div>
+        <div class="g-card"><div style="font-size:11px;font-weight:600;color:#1a5740;">Garantie biennale</div><div style="font-size:22px;font-weight:700;color:#2a9d6f;margin:4px 0;">2 ans</div><div style="font-size:11px;color:#1a5740;" id="g2">—</div></div>
+        <div class="g-card"><div style="font-size:11px;font-weight:600;color:#1a5740;">Garantie décennale</div><div style="font-size:22px;font-weight:700;color:#2a9d6f;margin:4px 0;">10 ans</div><div style="font-size:11px;color:#1a5740;" id="g10">—</div></div>
+      </div>
+    </div>
+
+    <!-- SECTION 6 : SIGNATURES -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Signatures</div>
+      <div style="font-size:12px;color:#7a8d97;margin-bottom:14px;">Signez dans les zones ci-dessous. Sur mobile : tendez le téléphone au client pour sa signature.</div>
+      <div class="row2">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin-bottom:6px;">Client</div>
+          <div style="font-size:12px;color:#12161c;margin-bottom:8px;" id="sig-client-name">—</div>
+          <div class="sig-container">
+            <canvas class="sig-canvas" id="sig-client" width="300" height="120"></canvas>
+            <button class="sig-clear" onclick="clearSig('client')">Effacer</button>
+            <div class="sig-label">Signez ici</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin-bottom:6px;">Entreprise</div>
+          <div style="font-size:12px;color:#12161c;margin-bottom:8px;" id="sig-tech-name">—</div>
+          <div class="sig-container">
+            <canvas class="sig-canvas" id="sig-tech" width="300" height="120"></canvas>
+            <button class="sig-clear" onclick="clearSig('tech')">Effacer</button>
+            <div class="sig-label">Signez ici</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" onclick="saveDraft()" style="flex:1;">Sauvegarder</button>
+      <button class="btn btn-grn btn-full" onclick="genererPV()" style="flex:2;">✓ Générer et archiver le PV</button>
+    </div>
+    <div id="form-err" style="margin-top:10px;"></div>
+  </div>
+
+</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SP_CONFIG={clientId:'ce885b92-7692-4ca5-aae6-756a5e94a792',tenantId:'de95b546-4d79-47f1-aafe-8926ca63e424',authority:'https://login.microsoftonline.com/de95b546-4d79-47f1-aafe-8926ca63e424',redirectUri:'https://bannequin.github.io/hexa/',spSite:'https://martincharpentefr.sharepoint.com',scopes:['User.Read','Files.ReadWrite.All','Calendars.ReadWrite','Sites.ReadWrite.All','Mail.Send','offline_access']};
+const ADMIN_EMAILS=['ba@groupebcnc.com','ca@groupebcnc.com','li@alptech-etancheite.fr'];
+let msalInstance=null,spAccount=null,spToken=null,spSiteId=null,spListId=null,currentEmail='',currentRole='',currentName='';
+let DB={interventions:[],pvReceptions:[],entreprises:[],techniciens:[]};
+let pvPhotos=[],pvReserves=[],editingPVId=null;
+
+function $(id){return document.getElementById(id);}
+function ini(n){return(n||'').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();}
+function toast(msg,dur=3500){const el=$('toast');el.textContent=msg;el.style.opacity='1';setTimeout(()=>el.style.opacity='0',dur);}
+function fmt(d){if(!d)return'—';const[y,m,j]=d.split('-');return`${j}/${m}/${y}`;}
+function h(){const h=new Date().getHours();return h<12?'Bonjour':h<18?'Bon après-midi':'Bonsoir';}
+function genNumPV(){
+  const y=new Date().getFullYear();
+  const existing=(DB.pvReceptions||[]).filter(p=>p.numPV?.startsWith('PVR-'+y));
+  const n=(existing.length+1).toString().padStart(4,'0');
+  return `PVR-${y}-${n}`;
+}
+
+async function graphCall(method,url,body=null){
+  await spGetToken();
+  const opts={method,headers:{'Authorization':'Bearer '+spToken,'Content-Type':'application/json'}};
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(url,opts);
+  if(!r.ok&&r.status!==204&&r.status!==202)throw new Error(`Graph ${r.status}`);
+  if(r.status===204||r.status===202)return{};
+  return r.json();
+}
+async function spGetToken(){
+  try{const r=await msalInstance.acquireTokenSilent({scopes:SP_CONFIG.scopes,account:spAccount});spToken=r.accessToken;return spToken;}
+  catch(e){try{const r=await msalInstance.acquireTokenPopup({scopes:SP_CONFIG.scopes,account:spAccount});spToken=r.accessToken;return spToken;}catch(e2){return null;}}
+}
+async function spInit(){
+  try{
+    const base='https://graph.microsoft.com/v1.0';
+    const site=await graphCall('GET',`${base}/sites/${SP_CONFIG.spSite.replace('https://','')}`);
+    spSiteId=site.id;
+    const lists=await graphCall('GET',`${base}/sites/${spSiteId}/lists?$filter=displayName eq 'HexaDB'`);
+    if(!lists.value?.length)return false;
+    spListId=lists.value[0].id;
+    return true;
+  }catch(e){return false;}
+}
+async function spPull(){
+  try{
+    const base='https://graph.microsoft.com/v1.0';
+    const items=await graphCall('GET',`${base}/sites/${spSiteId}/lists/${spListId}/items?$expand=fields`);
+    const main=items.value?.find(i=>i.fields?.HexaKey==='main_db');
+    if(!main)return;
+    Object.assign(DB,JSON.parse(main.fields.HexaData));
+    try{localStorage.setItem('hexa_db2',JSON.stringify(DB));}catch(e){}
+  }catch(e){}
+}
+async function spPush(){
+  try{
+    const base='https://graph.microsoft.com/v1.0';
+    // Ne pas pousser les photos (trop lourd)
+    const clean=JSON.parse(JSON.stringify(DB));
+    clean.pvReceptions=(clean.pvReceptions||[]).map(pv=>({...pv,photos:[],sigClient:'',sigTech:''}));
+    clean.entreprises=clean.entreprises?.map(e=>({...e,logo:null}));
+    clean.interventions=clean.interventions?.map(i=>{
+      if(!i.rapport)return i;
+      const r={...i.rapport};
+      delete r.generalPhotos;delete r.zonePhotos;delete r.matPhotos;
+      return{...i,rapport:r};
+    });
+    const json=JSON.stringify(clean);
+    const items=await graphCall('GET',`${base}/sites/${spSiteId}/lists/${spListId}/items?$expand=fields`);
+    const main=items.value?.find(i=>i.fields?.HexaKey==='main_db');
+    if(main){
+      await graphCall('PATCH',`${base}/sites/${spSiteId}/lists/${spListId}/items/${main.id}/fields`,{HexaData:json});
+    }
+  }catch(e){console.warn('spPush:',e);}
+}
+function saveDB(){
+  DB._v=Date.now();
+  try{localStorage.setItem('hexa_db2',JSON.stringify(DB));}catch(e){}
+  spPush();
+}
+
+async function getRole(em){
+  if(ADMIN_EMAILS.includes(em))return'admin';
+  if((DB.groupe?.adminEmail||'').toLowerCase()===em)return'admin';
+  if((DB.entreprises||[]).some(e=>e.directeur?.email?.toLowerCase()===em))return'directeur';
+  const a=(DB.acces||[]).find(a=>a.email?.toLowerCase()===em);
+  if(a)return a.role||'admin';
+  if((DB.techniciens||[]).some(t=>t.email?.toLowerCase()===em))return'technicien';
+  return null;
+}
+function isAdmin(){return currentRole==='admin'||currentRole==='directeur'||currentRole==='conducteur';}
+
+async function doLogin(){
+  try{
+    $('login-msg').textContent='Connexion en cours...';
+    await msalInstance.loginRedirect({scopes:SP_CONFIG.scopes});
+  }catch(e){$('login-err').textContent='Erreur : '+e.message;$('login-err').style.display='block';}
+}
+
+async function onSignedIn(){
+  $('login-msg').textContent='Chargement...';
+  try{const d=localStorage.getItem('hexa_db2');if(d)Object.assign(DB,JSON.parse(d));}catch(e){}
+  const spOk=await spInit();
+  if(spOk)await spPull();
+  currentEmail=spAccount.username?.toLowerCase()||'';
+  currentName=spAccount.name||spAccount.username;
+  currentRole=await getRole(currentEmail);
+  if(!currentRole||currentRole==='technicien'){
+    $('login-err').textContent='Accès non autorisé. Ce module est réservé aux directeurs et conducteurs de travaux.';
+    $('login-err').style.display='block';
+    $('login-msg').textContent='';
+    return;
+  }
+  $('login-screen').style.display='none';
+  $('app-screen').style.display='block';
+  const roleLabels={admin:'Administrateur',directeur:'Directeur',conducteur:'Conducteur de travaux'};
+  $('hdr-name').textContent=currentName;
+  $('hdr-role').textContent=roleLabels[currentRole]||currentRole;
+  $('hdr-av').textContent=ini(currentName);
+  initEntreprises();
+  initSigCanvas('client');
+  initSigCanvas('tech');
+  renderPVList();
+  $('pv-date').value=new Date().toISOString().split('T')[0];
+  calcGaranties();
+  $('pv-date').addEventListener('change',calcGaranties);
+  $('pv-representant').addEventListener('input',()=>$('sig-client-name').textContent=$('pv-representant').value||'—');
+  $('pv-tech').addEventListener('input',()=>$('sig-tech-name').textContent=$('pv-tech').value||'—');
+  renderPhotoGrid();
+}
+
+function initEntreprises(){
+  const sel=$('pv-entreprise');
+  sel.innerHTML='<option value="">— Sélectionner —</option>'+(DB.entreprises||[]).map(e=>`<option value="${e.id}">${e.nom}</option>`).join('');
+  sel.addEventListener('change',()=>{
+    const ent=(DB.entreprises||[]).find(e=>e.id===sel.value);
+    // Pré-remplir technicien avec le directeur si aucun
+    if(ent&&!$('pv-tech').value)$('pv-tech').value=ent.directeur?.nom||'';
+  });
+}
+
+function calcGaranties(){
+  const d=$('pv-date').value;
+  if(!d){$('g1').textContent='—';$('g2').textContent='—';$('g10').textContent='—';return;}
+  const addY=(d,n)=>{const dt=new Date(d);dt.setFullYear(dt.getFullYear()+n);return dt.toLocaleDateString('fr-FR');};
+  $('g1').textContent=`Jusqu\'au ${addY(d,1)}`;
+  $('g2').textContent=`Jusqu\'au ${addY(d,2)}`;
+  $('g10').textContent=`Jusqu\'au ${addY(d,10)}`;
+}
+
+// ── SIGNATURES ──────────────────────────────────────────────────────────────
+function initSigCanvas(type){
+  const canvas=$(type==='client'?'sig-client':'sig-tech');
+  const ctx=canvas.getContext('2d');
+  ctx.strokeStyle='#12161c';ctx.lineWidth=2;ctx.lineCap='round';ctx.lineJoin='round';
+  let drawing=false,lastX=0,lastY=0;
+  function getPos(e){
+    const rect=canvas.getBoundingClientRect();
+    const src=e.touches?e.touches[0]:e;
+    return{x:(src.clientX-rect.left)*(canvas.width/rect.width),y:(src.clientY-rect.top)*(canvas.height/rect.height)};
+  }
+  canvas.addEventListener('mousedown',e=>{drawing=true;const p=getPos(e);lastX=p.x;lastY=p.y;});
+  canvas.addEventListener('mousemove',e=>{if(!drawing)return;const p=getPos(e);ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(p.x,p.y);ctx.stroke();lastX=p.x;lastY=p.y;});
+  canvas.addEventListener('mouseup',()=>drawing=false);
+  canvas.addEventListener('mouseleave',()=>drawing=false);
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=getPos(e);lastX=p.x;lastY=p.y;},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!drawing)return;const p=getPos(e);ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(p.x,p.y);ctx.stroke();lastX=p.x;lastY=p.y;},{passive:false});
+  canvas.addEventListener('touchend',()=>drawing=false);
+}
+function clearSig(type){
+  const canvas=$(type==='client'?'sig-client':'sig-tech');
+  canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+}
+function getSig(type){
+  const canvas=$(type==='client'?'sig-client':'sig-tech');
+  const ctx=canvas.getContext('2d');
+  const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+  const hasContent=data.some((v,i)=>i%4===3&&v>0);
+  return hasContent?canvas.toDataURL('image/png'):'';
+}
+
+// ── PHOTOS ────────────────────────────────────────────────────────────────
+function resizeImg(file){
+  return new Promise(res=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const max=900,scale=Math.min(1,max/Math.max(img.width,img.height));
+        const c=document.createElement('canvas');
+        c.width=img.width*scale;c.height=img.height*scale;
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        res(c.toDataURL('image/jpeg',.78));
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function renderPhotoGrid(){
+  const grid=$('pv-photo-grid');
+  grid.innerHTML=pvPhotos.map((src,i)=>`<div class="photo-thumb"><img src="${src}" loading="lazy"><button class="del" onclick="pvPhotos.splice(${i},1);renderPhotoGrid();">✕</button></div>`).join('')
+    +`<label class="photo-add" title="Appareil photo"><span style="font-size:22px;">📷</span><span>Photo</span><input type="file" accept="image/*" capture="environment" multiple onchange="addPVPhotos(event)"></label>`
+    +`<label class="photo-add" title="Galerie"><span style="font-size:22px;">🖼</span><span>Galerie</span><input type="file" accept="image/*" multiple onchange="addPVPhotos(event)"></label>`;
+}
+async function addPVPhotos(e){
+  for(const f of Array.from(e.target.files)){pvPhotos.push(await resizeImg(f));}
+  renderPhotoGrid();
+}
+
+// ── RÉSERVES ────────────────────────────────────────────────────────────────
+function addReserve(){
+  const id=Date.now();
+  pvReserves.push({id,description:'',delai:'',statut:'en_attente'});
+  renderReserves();
+  $('no-reserve').style.display='none';
+}
+function removeReserve(id){pvReserves=pvReserves.filter(r=>r.id!==id);renderReserves();}
+function renderReserves(){
+  $('pv-reserves-list').innerHTML=pvReserves.map((r,i)=>`
+    <div class="reserve-item">
+      <div class="rsv-num">${i+1}</div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+        <input type="text" value="${r.description}" onchange="pvReserves[${i}].description=this.value" placeholder="Décrire la réserve..." style="padding:8px 10px;border:1px solid #e3e8ec;border-radius:8px;font-size:13px;outline:none;font-family:'DM Sans',sans-serif;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="font-size:11px;color:#7a8d97;">Délai de levée :</label>
+          <input type="date" value="${r.delai||''}" onchange="pvReserves[${i}].delai=this.value" style="padding:5px 8px;border:1px solid #e3e8ec;border-radius:6px;font-size:12px;outline:none;">
+        </div>
+      </div>
+      <button onclick="removeReserve(${r.id})" style="background:none;border:none;color:#aab8c0;cursor:pointer;font-size:16px;padding:4px;">✕</button>
+    </div>`).join('');
+  $('no-reserve').style.display=pvReserves.length===0?'block':'none';
+}
+function toggleSansReserve(cb){/* Pour affichage seulement */}
+
+// ── LISTE PV ─────────────────────────────────────────────────────────────────
+function renderPVList(){
+  const list=DB.pvReceptions||[];
+  $('pv-count').textContent=`${list.length} procès-verbal${list.length!==1?'s':''}`;
+  if(!list.length){$('pv-list').innerHTML='<div style="text-align:center;padding:32px;font-size:13px;color:#7a8d97;">Aucun PV créé pour l\'instant</div>';return;}
+  $('pv-list').innerHTML=[...list].reverse().map(pv=>`
+    <div class="pv-item" onclick="openEditPV('${pv.id}')">
+      <div class="pv-dot" style="background:${pv.statut==='signe'?'#2a9d6f':'#c47d0a'};"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pv.client}${pv.chantier?' — '+pv.chantier:''}</div>
+        <div style="font-size:11px;color:#7a8d97;margin-top:2px;">${pv.numPV} · ${fmt(pv.dateReception)} · ${pv.entrepriseNom||'—'}</div>
+      </div>
+      <div class="pv-status" style="background:${pv.statut==='signe'?'#eaf7f1':'#fff7e6'};color:${pv.statut==='signe'?'#085041':'#854f0b'};">${pv.statut==='signe'?'Signé':'Brouillon'}</div>
+    </div>`).join('');
+}
+
+function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(id)?.classList.add('active');}
+function showList(){showView('view-list');renderPVList();}
+
+function openNewPV(){
+  editingPVId=null;pvPhotos=[];pvReserves=[];
+  $('form-title').textContent='Nouveau PV';
+  ['pv-client','pv-representant','pv-qualite','pv-chantier','pv-adresse','pv-tech','pv-ref-devis','pv-travaux'].forEach(id=>{$(id).value='';});
+  $('pv-entreprise').value='';
+  $('pv-date').value=new Date().toISOString().split('T')[0];
+  $('sig-client-name').textContent='—';$('sig-tech-name').textContent='—';
+  clearSig('client');clearSig('tech');
+  renderReserves();renderPhotoGrid();calcGaranties();
+  showView('view-form');
+}
+
+function openEditPV(id){
+  const pv=(DB.pvReceptions||[]).find(p=>p.id===id);
+  if(!pv)return;
+  editingPVId=id;pvPhotos=[...(pv.photos||[])];pvReserves=[...(pv.reserves||[])];
+  $('form-title').textContent=pv.numPV||'PV';
+  $('pv-client').value=pv.client||'';$('pv-representant').value=pv.representant||'';
+  $('pv-qualite').value=pv.qualite||'';$('pv-chantier').value=pv.chantier||'';
+  $('pv-adresse').value=pv.adresse||'';$('pv-tech').value=pv.techNom||'';
+  $('pv-ref-devis').value=pv.refDevis||'';$('pv-travaux').value=pv.travaux||'';
+  $('pv-date').value=pv.dateReception||'';$('pv-entreprise').value=pv.entrepriseId||'';
+  $('sig-client-name').textContent=pv.representant||'—';
+  $('sig-tech-name').textContent=pv.techNom||'—';
+  clearSig('client');clearSig('tech');
+  // Redessiner signatures si existantes
+  if(pv.sigClient){const img=new Image();img.onload=()=>$('sig-client').getContext('2d').drawImage(img,0,0,$('sig-client').width,$('sig-client').height);img.src=pv.sigClient;}
+  if(pv.sigTech){const img=new Image();img.onload=()=>$('sig-tech').getContext('2d').drawImage(img,0,0,$('sig-tech').width,$('sig-tech').height);img.src=pv.sigTech;}
+  renderReserves();renderPhotoGrid();calcGaranties();
+  showView('view-form');
+}
+
+function collectFormData(){
+  const entId=$('pv-entreprise').value;
+  const ent=(DB.entreprises||[]).find(e=>e.id===entId);
+  return{
+    client:$('pv-client').value.trim(),
+    representant:$('pv-representant').value.trim(),
+    qualite:$('pv-qualite').value.trim(),
+    dateReception:$('pv-date').value,
+    chantier:$('pv-chantier').value.trim(),
+    adresse:$('pv-adresse').value.trim(),
+    entrepriseId:entId,
+    entrepriseNom:ent?.nom||'',
+    techNom:$('pv-tech').value.trim(),
+    refDevis:$('pv-ref-devis').value.trim(),
+    travaux:$('pv-travaux').value.trim(),
+    reserves:pvReserves.map(r=>({...r})),
+    photos:pvPhotos,
+    sigClient:getSig('client'),
+    sigTech:getSig('tech'),
+  };
+}
+
+function saveDraft(){
+  const data=collectFormData();
+  if(!data.client){toast('Nom du client requis','err');return;}
+  if(!DB.pvReceptions)DB.pvReceptions=[];
+  if(editingPVId){
+    const idx=DB.pvReceptions.findIndex(p=>p.id===editingPVId);
+    if(idx>=0)Object.assign(DB.pvReceptions[idx],data);
+  }else{
+    const id='PV'+Date.now();
+    editingPVId=id;
+    DB.pvReceptions.push({id,numPV:genNumPV(),...data,statut:'brouillon',createdAt:new Date().toISOString()});
+  }
+  saveDB();toast('✓ Brouillon sauvegardé');
+}
+
+async function genererPV(){
+  const data=collectFormData();
+  if(!data.client){$('form-err').innerHTML='<div style="color:#e04444;font-size:12px;padding:8px;">Nom du client requis</div>';return;}
+  if(!data.sigClient&&!data.sigTech){$('form-err').innerHTML='<div style="color:#e04444;font-size:12px;padding:8px;">Au moins une signature requise</div>';return;}
+  toast('⏳ Génération du PV...');
+  if(!DB.pvReceptions)DB.pvReceptions=[];
+  let pvId=editingPVId,numPV='';
+  if(pvId){
+    const idx=DB.pvReceptions.findIndex(p=>p.id===pvId);
+    if(idx>=0){Object.assign(DB.pvReceptions[idx],data);DB.pvReceptions[idx].statut='signe';numPV=DB.pvReceptions[idx].numPV;}
+  }else{
+    pvId='PV'+Date.now();numPV=genNumPV();
+    editingPVId=pvId;
+    DB.pvReceptions.push({id:pvId,numPV,...data,statut:'signe',createdAt:new Date().toISOString(),signedAt:new Date().toISOString()});
+  }
+  saveDB();
+  // Générer HTML
+  const htmlPV=buildPVHTML({id:pvId,numPV,...data,statut:'signe'});
+  // Archiver sur SharePoint
+  try{
+    await uploadPVToSP(pvId,numPV,data.entrepriseNom,htmlPV,{...data,numPV});
+    toast('✓ PV archivé sur SharePoint');
+  }catch(e){toast('⚠ Archivage SP : '+e.message,'warn');}
+  // Upload GitHub
+  try{
+    const ghToken=DB.githubToken||localStorage.getItem('hexa_gh_token')||'';
+    if(ghToken){
+      const filename=numPV+'.html';
+      const b64=btoa(unescape(encodeURIComponent(htmlPV)));
+      const url=`https://api.github.com/repos/bannequin/hexa/contents/reports/${filename}`;
+      // Vérifier si le fichier existe
+      let sha='';
+      try{const ex=await fetch(url,{headers:{'Authorization':'token '+ghToken}});if(ex.ok){const j=await ex.json();sha=j.sha||'';}}catch(e){}
+      await fetch(url,{method:'PUT',headers:{'Authorization':'token '+ghToken,'Content-Type':'application/json'},body:JSON.stringify({message:`PV ${numPV}`,content:b64,...(sha?{sha}:{})})});
+      const lien=`https://rapports.groupebcnc.com/${filename}`;
+      const idx=DB.pvReceptions.findIndex(p=>p.id===pvId);
+      if(idx>=0)DB.pvReceptions[idx].lienPV=lien;
+      saveDB();toast('✓ PV publié : '+lien);
+    }
+  }catch(e){toast('⚠ Publication GitHub : '+e.message,'warn');}
+  toast('✓ PV généré et archivé !',4000);
+  setTimeout(()=>showList(),1500);
+}
+
+async function uploadPVToSP(pvId,numPV,entNom,html,data){
+  if(!spSiteId)return;
+  await spGetToken();
+  const base='https://graph.microsoft.com/v1.0';
+  const nom=(entNom||'HEXA').replace(/[^a-zA-Z0-9\-_]/gi,'_');
+  const folder=`rapports/${nom}/PV/${numPV}`;
+  await fetch(`${base}/sites/${spSiteId}/drive/root:/${folder}/pv.html:/content`,{method:'PUT',headers:{'Authorization':'Bearer '+spToken,'Content-Type':'text/html'},body:html});
+  const jsonClean={...data,photos:[],sigClient:'',sigTech:''};
+  await fetch(`${base}/sites/${spSiteId}/drive/root:/${folder}/pv.json:/content`,{method:'PUT',headers:{'Authorization':'Bearer '+spToken,'Content-Type':'application/json'},body:JSON.stringify(jsonClean,null,2)});
+  // Upload photos
+  let n=0;
+  for(const p of (data.photos||[])){
+    try{const blob=await(await fetch(p)).blob();await fetch(`${base}/sites/${spSiteId}/drive/root:/${folder}/photos/photo_${++n}.jpg:/content`,{method:'PUT',headers:{'Authorization':'Bearer '+spToken,'Content-Type':'image/jpeg'},body:blob});}catch(e){}
+  }
+}
+
+function addY(dateStr,n){const d=new Date(dateStr);d.setFullYear(d.getFullYear()+n);return d.toLocaleDateString('fr-FR');}
+
+function buildPVHTML(pv){
+  const ent=(DB.entreprises||[]).find(e=>e.id===pv.entrepriseId)||{};
+  const logoHtml=ent.logo?`<img src="${ent.logo}" style="height:52px;object-fit:contain;max-width:150px;" alt="${ent.nom}">`:`<div style="font-size:18px;font-weight:700;color:#6c5ce7;">${ent.nom||'HEXA'}</div>`;
+  const fmtD=d=>{if(!d)return'—';const[y,m,j]=d.split('-');return`${j}/${m}/${y}`;};
+  const photosHTML=(pv.photos||[]).map(p=>`<div style="flex:0 0 calc(33% - 8px);aspect-ratio:1;border-radius:10px;overflow:hidden;"><img src="${p}" style="width:100%;height:100%;object-fit:cover;"></div>`).join('');
+  const reservesHTML=(pv.reserves||[]).filter(r=>r.description).map((r,i)=>`
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid #e3e8ec;">
+      <div style="width:24px;height:24px;border-radius:50%;background:#fff7e6;color:#c47d0a;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</div>
+      <div style="flex:1;"><div style="font-size:13px;color:#12161c;">${r.description}</div>${r.delai?`<div style="font-size:11px;color:#7a8d97;margin-top:3px;">Délai de levée : ${fmtD(r.delai)}</div>`:''}</div>
+      <div style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:#fff7e6;color:#854f0b;">En attente</div>
+    </div>`).join('');
+  const sigClientHtml=pv.sigClient?`<img src="${pv.sigClient}" style="width:100%;height:80px;object-fit:contain;">`:`<div style="height:80px;display:flex;align-items:center;justify-content:center;color:#aab8c0;font-size:12px;">Non signé</div>`;
+  const sigTechHtml=pv.sigTech?`<img src="${pv.sigTech}" style="width:100%;height:80px;object-fit:contain;">`:`<div style="height:80px;display:flex;align-items:center;justify-content:center;color:#aab8c0;font-size:12px;">Non signé</div>`;
+  return`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PV de réception — ${pv.client}</title><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'DM Sans',sans-serif;background:#f5f6f8;color:#12161c;-webkit-font-smoothing:antialiased;}.page{max-width:760px;margin:0 auto;padding:24px 16px 60px;}.card{background:#fff;border-radius:16px;border:1px solid #e3e8ec;overflow:hidden;margin-bottom:16px;}.sec{padding:16px 22px;border-bottom:1px solid #e3e8ec;}.sec:last-child{border-bottom:none;}.lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#aab8c0;margin-bottom:4px;}.val{font-size:14px;color:#12161c;}.sec-hdr{padding:10px 18px;background:#f8fafc;border-bottom:1px solid #e3e8ec;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#7a8d97;}.g-card{padding:12px;background:#eaf7f1;border-radius:10px;border:1px solid #a8dfc5;text-align:center;}.sig-box{border:1px solid #e3e8ec;border-radius:10px;overflow:hidden;min-height:80px;}@media print{body{background:#fff;}.page{max-width:none;padding:10px;}}</style></head><body>
+<div class="page">
+<div class="card">
+  <div style="display:flex;align-items:stretch;border-bottom:1px solid #e3e8ec;">
+    <div style="padding:18px 22px;display:flex;align-items:center;gap:14px;flex:1;border-right:1px solid #e3e8ec;">${logoHtml}<div><div style="font-size:13px;font-weight:600;">${ent.nom||'Alptech Etanchéité'}</div><div style="font-size:11px;color:#7a8d97;margin-top:2px;">${ent.adresse||'36 Ch. des Fontaines · 38190 Bernin'}</div></div></div>
+    <div style="padding:18px 22px;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;">
+      <div style="font-size:13px;font-weight:600;color:#12161c;">Procès-verbal de réception de travaux</div>
+      <div style="font-size:11px;color:#7a8d97;margin-top:3px;">${pv.numPV}</div>
+      <div style="margin-top:6px;background:#eaf7f1;color:#085041;font-size:11px;font-weight:600;padding:3px 12px;border-radius:20px;border:1px solid #a8dfc5;">Réception amiable</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;">
+    <div style="padding:16px 22px;border-right:1px solid #e3e8ec;"><div class="lbl">Client</div><div style="font-size:16px;font-weight:600;color:#12161c;">${pv.client}</div><div style="font-size:12px;color:#7a8d97;margin-top:3px;">${pv.qualite||''}${pv.representant?' · Représenté par '+pv.representant:''}</div></div>
+    <div style="padding:16px 22px;"><div class="lbl">Chantier</div><div style="font-size:16px;font-weight:600;color:#12161c;">${pv.chantier||pv.adresse||'—'}</div><div style="font-size:12px;color:#7a8d97;margin-top:3px;">${pv.adresse||''}</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #e3e8ec;">
+    <div style="padding:14px 22px;border-right:1px solid #e3e8ec;"><div class="lbl">Date de réception</div><div style="font-size:18px;font-weight:600;color:#12161c;">${pv.dateReception?pv.dateReception.split('-').reverse().join('/'):'—'}</div><div style="font-size:11px;color:#7a8d97;margin-top:2px;">Point de départ des garanties légales</div></div>
+    <div style="padding:14px 22px;"><div class="lbl">Référence marché / devis</div><div style="font-size:13px;font-weight:500;color:#12161c;">${pv.refDevis||'—'}</div><div style="font-size:11px;color:#7a8d97;margin-top:2px;">Entreprise : ${ent.nom||'—'} · ${pv.techNom||'—'}</div></div>
+  </div>
+  ${pv.travaux?`<div style="padding:14px 22px;border-top:1px solid #e3e8ec;"><div class="lbl">Travaux réalisés</div><div style="font-size:13px;color:#12161c;line-height:1.7;margin-top:4px;">${pv.travaux}</div></div>`:''}
+</div>
+
+${photosHTML?`<div class="card"><div class="sec-hdr">Photos de réalisation</div><div style="display:flex;flex-wrap:wrap;gap:8px;padding:14px 18px;">${photosHTML}</div></div>`:''}
+
+<div class="card">
+  <div class="sec-hdr">Réserves</div>
+  ${reservesHTML?`<div style="padding:0 18px;">${reservesHTML}</div>`:'<div style="padding:14px 18px;font-size:13px;color:#2a9d6f;font-weight:500;">Réception sans réserve — travaux conformes à la commande</div>'}
+  ${reservesHTML?`<div style="padding:10px 18px;font-size:12px;color:#7a8d97;font-style:italic;border-top:1px solid #e3e8ec;">Les réserves devront être levées aux dates indiquées au titre de la garantie de parfait achèvement (art. 1792-6 Code civil).</div>`:''}
+</div>
+
+<div class="card">
+  <div class="sec-hdr">Garanties légales — art. 1792 et 1792-6 Code civil</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 18px;">
+    <div class="g-card"><div style="font-size:11px;font-weight:600;color:#1a5740;">Parfait achèvement</div><div style="font-size:20px;font-weight:700;color:#2a9d6f;margin:4px 0;">1 an</div><div style="font-size:11px;color:#1a5740;">${pv.dateReception?`Jusqu\'au ${addY(pv.dateReception,1)}`:'—'}</div></div>
+    <div class="g-card"><div style="font-size:11px;font-weight:600;color:#1a5740;">Garantie biennale</div><div style="font-size:20px;font-weight:700;color:#2a9d6f;margin:4px 0;">2 ans</div><div style="font-size:11px;color:#1a5740;">${pv.dateReception?`Jusqu\'au ${addY(pv.dateReception,2)}`:'—'}</div></div>
+    <div class="g-card"><div style="font-size:11px;font-weight:600;color:#1a5740;">Garantie décennale</div><div style="font-size:20px;font-weight:700;color:#2a9d6f;margin:4px 0;">10 ans</div><div style="font-size:11px;color:#1a5740;">${pv.dateReception?`Jusqu\'au ${addY(pv.dateReception,10)}`:'—'}</div></div>
+  </div>
+  <div style="padding:10px 18px;font-size:12px;color:#7a8d97;border-top:1px solid #e3e8ec;">La signature du présent PV déclenche les garanties légales et marque le transfert de responsabilité de l'ouvrage.</div>
+</div>
+
+<div class="card">
+  <div class="sec-hdr">Signatures</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;">
+    <div style="padding:18px 22px;border-right:1px solid #e3e8ec;">
+      <div style="font-size:11px;font-weight:600;color:#7a8d97;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Signature du client</div>
+      <div style="font-size:12px;color:#12161c;margin-bottom:10px;">${pv.representant||'—'}${pv.qualite?' · '+pv.qualite:''}</div>
+      <div class="sig-box">${sigClientHtml}</div>
+    </div>
+    <div style="padding:18px 22px;">
+      <div style="font-size:11px;font-weight:600;color:#7a8d97;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Signature ${ent.nom||'entreprise'}</div>
+      <div style="font-size:12px;color:#12161c;margin-bottom:10px;">${pv.techNom||'—'}</div>
+      <div class="sig-box">${sigTechHtml}</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 4px;">
+  <div style="font-size:11px;color:#aab8c0;">Fait à ${pv.adresse?.split(',').pop()?.trim()||'—'}, le ${pv.dateReception?pv.dateReception.split('-').reverse().join('/'):'—'} · Etabli en 2 exemplaires</div>
+  <div style="font-size:11px;color:#aab8c0;">${pv.numPV} · ${ent.nom||'Groupe BCNC'}</div>
+</div>
+</div>
+</body></html>`;
+}
+
+// INIT
+window.addEventListener('load',async()=>{
+  msalInstance=new msal.PublicClientApplication({auth:{clientId:SP_CONFIG.clientId,authority:SP_CONFIG.authority,redirectUri:SP_CONFIG.redirectUri},cache:{cacheLocation:'sessionStorage',storeAuthStateInCookie:false}});
+  try{
+    const resp=await msalInstance.handleRedirectPromise();
+    if(resp){spAccount=resp.account;await onSignedIn();return;}
+    const accounts=msalInstance.getAllAccounts();
+    if(accounts.length>0){spAccount=accounts[0];await onSignedIn();return;}
+  }catch(e){console.error(e);}
+  $('login-msg').textContent='';
+});
+</script>
+</body>
+</html>
