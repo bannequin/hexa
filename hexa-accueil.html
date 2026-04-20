@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HEXA — Groupe BCNC</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/msal.js/2.38.3/msal-browser.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:#f5f6f8;color:#12161c;min-height:100vh;-webkit-font-smoothing:antialiased;}
+.page{max-width:680px;margin:0 auto;padding:24px 16px 60px;}
+
+/* LOGIN */
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-card{background:#fff;border-radius:20px;border:1px solid #e3e8ec;padding:40px 36px;max-width:420px;width:100%;text-align:center;}
+.login-logo{font-family:'Syne',sans-serif;font-size:48px;font-weight:800;color:#12161c;letter-spacing:-2px;margin-bottom:6px;}
+.login-logo span{color:#2abbda;}
+.login-sub{font-size:14px;color:#7a8d97;margin-bottom:32px;}
+.login-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#12161c;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;}
+.login-btn:hover{background:#1e2530;}
+#login-msg{font-size:12px;color:#7a8d97;margin-top:12px;}
+#login-err{font-size:12px;color:#e04444;margin-top:8px;display:none;}
+
+/* APP */
+#app-screen{display:none;}
+.hdr{background:#12161c;border-radius:16px;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.logo{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#fff;letter-spacing:-1px;}
+.logo span{color:#2abbda;}
+.user-pill{display:flex;align-items:center;gap:10px;}
+.av{width:34px;height:34px;border-radius:50%;background:rgba(42,187,218,.15);border:1px solid rgba(42,187,218,.3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2abbda;flex-shrink:0;}
+.user-name{font-size:13px;font-weight:500;color:#fff;}
+.user-role{font-size:10px;color:#7a8d97;margin-top:1px;}
+.greeting-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#12161c;margin-bottom:4px;}
+.greeting-sub{font-size:13px;color:#7a8d97;margin-bottom:20px;}
+
+/* MODULES */
+.modules{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.mc{background:#fff;border:1px solid #e3e8ec;border-radius:14px;padding:18px;position:relative;overflow:hidden;transition:border-color .15s,box-shadow .15s;}
+.mc.active{cursor:pointer;}
+.mc.active:hover{border-color:#2abbda;box-shadow:0 4px 16px rgba(42,187,218,.1);}
+.mc.soon{cursor:default;}
+.mc.pending{opacity:.5;cursor:not-allowed;}
+.m-stripe{position:absolute;top:0;left:0;right:0;height:3px;}
+.m-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;margin-top:8px;font-size:22px;}
+.m-title{font-size:14px;font-weight:600;color:#12161c;margin-bottom:5px;}
+.m-desc{font-size:12px;color:#7a8d97;line-height:1.6;margin-bottom:10px;}
+.m-pill{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;}
+.m-dot{width:6px;height:6px;border-radius:50%;}
+
+/* ACTIVITÉ */
+.recents{background:#fff;border-radius:14px;border:1px solid #e3e8ec;overflow:hidden;}
+.recents-hdr{padding:12px 18px;border-bottom:1px solid #e3e8ec;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7a8d97;display:flex;align-items:center;justify-content:space-between;}
+.r-item{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid #e3e8ec;cursor:pointer;transition:background .1s;}
+.r-item:hover{background:#f8fafc;}
+.r-item:last-child{border-bottom:none;}
+.r-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.r-status{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap;}
+.empty{text-align:center;padding:32px;font-size:13px;color:#7a8d97;}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#12161c;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">HE<span>X</span>A</div>
+    <div class="login-sub">Groupe BCNC · Plateforme d'intervention</div>
+    <button class="login-btn" onclick="doLogin()">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="1" y="1" width="8" height="8" fill="#F25022"/><rect x="11" y="1" width="8" height="8" fill="#7FBA00"/><rect x="1" y="11" width="8" height="8" fill="#00A4EF"/><rect x="11" y="11" width="8" height="8" fill="#FFB900"/></svg>
+      Se connecter avec Microsoft 365
+    </button>
+    <div id="login-msg"></div>
+    <div id="login-err"></div>
+  </div>
+</div>
+
+<div id="app-screen">
+<div class="page">
+  <div class="hdr">
+    <div class="logo">HE<span>X</span>A</div>
+    <div class="user-pill">
+      <div style="text-align:right;">
+        <div class="user-name" id="hdr-name">—</div>
+        <div class="user-role" id="hdr-role">—</div>
+      </div>
+      <div class="av" id="hdr-av">?</div>
+    </div>
+  </div>
+
+  <div class="greeting-title" id="greeting-title">Bonjour</div>
+  <div class="greeting-sub" id="greeting-sub">Groupe BCNC</div>
+
+  <div class="modules" id="modules-grid"></div>
+
+  <div class="recents">
+    <div class="recents-hdr">
+      <span>Activité récente</span>
+      <span id="badge-valider" style="display:none;background:#fff7e6;color:#c47d0a;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;"></span>
+    </div>
+    <div id="activity-list"><div class="empty">Chargement...</div></div>
+  </div>
+</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SP_CONFIG = {
+  clientId:'ce885b92-7692-4ca5-aae6-756a5e94a792',
+  tenantId:'de95b546-4d79-47f1-aafe-8926ca63e424',
+  authority:'https://login.microsoftonline.com/de95b546-4d79-47f1-aafe-8926ca63e424',
+  redirectUri:'https://bannequin.github.io/hexa/',
+  spSite:'https://martincharpentefr.sharepoint.com',
+  scopes:['User.Read','Files.ReadWrite.All','Calendars.ReadWrite','Sites.ReadWrite.All','Mail.Send','offline_access']
+};
+const ADMIN_EMAILS=['ba@groupebcnc.com','ca@groupebcnc.com','li@alptech-etancheite.fr'];
+let msalInstance=null,spAccount=null,spToken=null,spSiteId=null,spListId=null,currentEmail='',currentRole='',DB={interventions:[],pvReceptions:[]};
+
+function $(id){return document.getElementById(id);}
+function ini(n){return (n||'').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();}
+function toast(msg,dur=3000){const el=$('toast');el.textContent=msg;el.style.opacity='1';setTimeout(()=>el.style.opacity='0',dur);}
+function fmt(d){if(!d)return'—';const[y,m,j]=d.split('-');return`${j}/${m}/${y}`;}
+function h(){const h=new Date().getHours();return h<12?'Bonjour':h<18?'Bon après-midi':'Bonsoir';}
+
+async function graphCall(method,url,body=null){
+  await spGetToken();
+  const opts={method,headers:{'Authorization':'Bearer '+spToken,'Content-Type':'application/json'}};
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(url,opts);
+  if(!r.ok&&r.status!==204&&r.status!==202)throw new Error(`Graph ${r.status}`);
+  if(r.status===204||r.status===202)return{};
+  return r.json();
+}
+async function spGetToken(){
+  try{const r=await msalInstance.acquireTokenSilent({scopes:SP_CONFIG.scopes,account:spAccount});spToken=r.accessToken;return spToken;}
+  catch(e){try{const r=await msalInstance.acquireTokenPopup({scopes:SP_CONFIG.scopes,account:spAccount});spToken=r.accessToken;return spToken;}catch(e2){return null;}}
+}
+async function spInit(){
+  try{
+    const base='https://graph.microsoft.com/v1.0';
+    const siteHost=SP_CONFIG.spSite.replace('https://','');
+    const site=await graphCall('GET',`${base}/sites/${siteHost}`);
+    spSiteId=site.id;
+    const lists=await graphCall('GET',`${base}/sites/${spSiteId}/lists?$filter=displayName eq 'HexaDB'`);
+    if(!lists.value?.length)return false;
+    spListId=lists.value[0].id;
+    return true;
+  }catch(e){return false;}
+}
+async function spPull(){
+  try{
+    const base='https://graph.microsoft.com/v1.0';
+    const items=await graphCall('GET',`${base}/sites/${spSiteId}/lists/${spListId}/items?$expand=fields`);
+    const main=items.value?.find(i=>i.fields?.HexaKey==='main_db');
+    if(!main)return;
+    const remote=JSON.parse(main.fields.HexaData);
+    Object.assign(DB,remote);
+    try{localStorage.setItem('hexa_db2',JSON.stringify(DB));}catch(e){}
+  }catch(e){console.warn('spPull:',e);}
+}
+async function getRole(em){
+  if(ADMIN_EMAILS.includes(em))return'admin';
+  const adminEmail=(DB.groupe?.adminEmail||'').toLowerCase();
+  if(adminEmail&&em===adminEmail)return'admin';
+  const isDir=(DB.entreprises||[]).some(e=>e.directeur?.email?.toLowerCase()===em);
+  if(isDir)return'directeur';
+  const acces=(DB.acces||[]).find(a=>a.email?.toLowerCase()===em);
+  if(acces)return acces.role||'admin';
+  const isTech=(DB.techniciens||[]).some(t=>t.email?.toLowerCase()===em);
+  if(isTech)return'technicien';
+  return null;
+}
+function isAdmin(){return currentRole==='admin'||currentRole==='directeur'||currentRole==='conducteur';}
+function roleLbl(){
+  const map={admin:'Administrateur',directeur:'Directeur',conducteur:'Conducteur de travaux',technicien:'Technicien'};
+  return map[currentRole]||currentRole;
+}
+
+async function doLogin(){
+  try{
+    $('login-msg').textContent='Connexion en cours...';
+    $('login-err').style.display='none';
+    await msalInstance.loginRedirect({scopes:SP_CONFIG.scopes});
+  }catch(e){
+    $('login-err').textContent='Erreur de connexion : '+e.message;
+    $('login-err').style.display='block';
+    $('login-msg').textContent='';
+  }
+}
+
+async function onSignedIn(){
+  $('login-msg').textContent='Vérification des accès...';
+  // Charger DB locale
+  try{const d=localStorage.getItem('hexa_db2');if(d)Object.assign(DB,JSON.parse(d));}catch(e){}
+  // Sync SP
+  const spOk=await spInit();
+  if(spOk)await spPull();
+  currentEmail=spAccount.username?.toLowerCase()||'';
+  const nom=spAccount.name||spAccount.username;
+  currentRole=await getRole(currentEmail);
+  if(!currentRole){
+    $('login-err').textContent='Accès non autorisé. Contactez votre administrateur HEXA.';
+    $('login-err').style.display='block';
+    $('login-msg').textContent='';
+    return;
+  }
+  // Afficher l'app
+  $('login-screen').style.display='none';
+  $('app-screen').style.display='block';
+  const prenom=nom.split(' ')[0];
+  $('greeting-title').textContent=`${h()} ${prenom}`;
+  $('greeting-sub').textContent=`Groupe BCNC · ${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}`;
+  $('hdr-name').textContent=nom;
+  $('hdr-role').textContent=roleLbl();
+  $('hdr-av').textContent=ini(nom);
+  renderModules();
+  renderActivity();
+}
+
+function renderModules(){
+  const isAdm=isAdmin();
+  const modules=[
+    {
+      id:'interventions',
+      titre:'Gestion des interventions',
+      desc:'Planning, rapports terrain, validation directeur, chiffrage, envoi au client.',
+      couleur:'#2abbda',
+      bg:'#eaf9fc',
+      statut:'active',
+      role:'all',
+      url:'hexa-bcnc.html',
+      icon:`<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="3" width="16" height="16" rx="2" stroke="#2abbda" stroke-width="1.5"/><path d="M7 8h8M7 12h5" stroke="#2abbda" stroke-width="1.5" stroke-linecap="round"/><circle cx="16" cy="15" r="3" fill="#2abbda"/><path d="M15 15l.7.7L17 14" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      pillColor:'#085041',pillBg:'#eaf7f1',pillDot:'#2a9d6f',pillTxt:'Disponible'
+    },
+    {
+      id:'pv',
+      titre:'PV de réception',
+      desc:'Procès-verbal avec réserves et signature sur place. Directeur / Conducteur.',
+      couleur:'#6c5ce7',
+      bg:'#f0eeff',
+      statut:isAdm?'soon':'pending',
+      role:'admin',
+      url:'hexa-pv.html',
+      icon:`<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="3" width="16" height="16" rx="2" stroke="#6c5ce7" stroke-width="1.5"/><path d="M7 8h8M7 12h8M7 16h4" stroke="#6c5ce7" stroke-width="1.5" stroke-linecap="round"/><path d="M14 14v4M12 16h4" stroke="#6c5ce7" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+      pillColor:'#633806',pillBg:'#fff7e6',pillDot:'#c47d0a',pillTxt:'Bientôt disponible'
+    },
+    {
+      id:'diagnostic',
+      titre:'Diagnostic',
+      desc:'Rapport de diagnostic complet avec plan de maintenance et budget pluriannuel.',
+      couleur:'#aab8c0',
+      bg:'#f5f6f8',
+      statut:'pending',
+      role:'all',
+      url:'',
+      icon:`<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4a7 7 0 100 14A7 7 0 0011 4z" stroke="#aab8c0" stroke-width="1.5"/><path d="M11 8v3.5l2.5 1.5" stroke="#aab8c0" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+      pillColor:'#7a8d97',pillBg:'#f5f6f8',pillDot:'#aab8c0',pillTxt:'En développement'
+    },
+    {
+      id:'rapport',
+      titre:'Rapport de chantier',
+      desc:'Suivi de chantier, compte-rendu de réunion, avancement et levée de réserves.',
+      couleur:'#aab8c0',
+      bg:'#f5f6f8',
+      statut:'pending',
+      role:'all',
+      url:'',
+      icon:`<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="4" y="2" width="14" height="18" rx="2" stroke="#aab8c0" stroke-width="1.5"/><path d="M7 7h8M7 11h8M7 15h5" stroke="#aab8c0" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+      pillColor:'#7a8d97',pillBg:'#f5f6f8',pillDot:'#aab8c0',pillTxt:'En développement'
+    }
+  ];
+
+  $('modules-grid').innerHTML=modules.map(m=>{
+    const clickable=m.statut==='active'&&m.url;
+    return `<div class="mc ${m.statut}" onclick="${clickable?`goTo('${m.url}')`:''}" style="border-top:3px solid ${m.statut!=='pending'?m.couleur:'#e3e8ec'};">
+      <div class="m-icon" style="background:${m.bg};">${m.icon}</div>
+      <div class="m-title">${m.titre}</div>
+      <div class="m-desc">${m.desc}</div>
+      <div class="m-pill" style="background:${m.pillBg};color:${m.pillColor};">
+        <div class="m-dot" style="background:${m.pillDot};"></div>
+        ${m.pillTxt}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderActivity(){
+  const items=[];
+  // Interventions
+  for(const i of (DB.interventions||[]).slice(-20).reverse()){
+    const label=i.statut==='valider'?{txt:'À valider',bg:'#fff7e6',c:'#854f0b'}
+      :i.statut==='envoye'?{txt:'Envoyé',bg:'#eaf7f1',c:'#085041'}
+      :{txt:'Planifié',bg:'#f0eeff',c:'#3c3489'};
+    items.push({
+      dot:i.statut==='valider'?'#c47d0a':i.statut==='envoye'?'#2a9d6f':'#6c5ce7',
+      titre:`${i.client}${i.chantier?' — '+i.chantier:''}`,
+      sub:`${i.type||'—'} · ${i.techNom||'—'} · ${i.numRapport||''}`,
+      date:i.date,statut:label,module:'interventions',
+      onclick:`goTo('hexa-bcnc.html')`
+    });
+  }
+  // PV
+  for(const pv of (DB.pvReceptions||[]).slice(-10).reverse()){
+    items.push({
+      dot:'#6c5ce7',
+      titre:`${pv.client}${pv.chantier?' — '+pv.chantier:''}`,
+      sub:`PV de réception · ${pv.numPV||''}`,
+      date:pv.dateReception,
+      statut:{txt:'PV signé',bg:'#f0eeff',c:'#3c3489'},
+      module:'pv',onclick:`goTo('hexa-pv.html')`
+    });
+  }
+  items.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1);
+  const toVal=(DB.interventions||[]).filter(i=>i.statut==='valider').length;
+  if(toVal>0){$('badge-valider').style.display='inline';$('badge-valider').textContent=`${toVal} à valider`;}
+  $('activity-list').innerHTML=items.slice(0,8).map(it=>`
+    <div class="r-item" onclick="${it.onclick}">
+      <div class="r-dot" style="background:${it.dot};"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;color:#12161c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${it.titre}</div>
+        <div style="font-size:11px;color:#7a8d97;margin-top:2px;">${it.sub}${it.date?' · '+fmt(it.date):''}</div>
+      </div>
+      <div class="r-status" style="background:${it.statut.bg};color:${it.statut.c};">${it.statut.txt}</div>
+    </div>`).join('')||'<div class="empty">Aucune activité récente</div>';
+}
+
+function goTo(url){window.location.href=url;}
+
+// Init MSAL
+window.addEventListener('load',async()=>{
+  msalInstance=new msal.PublicClientApplication({
+    auth:{clientId:SP_CONFIG.clientId,authority:SP_CONFIG.authority,redirectUri:SP_CONFIG.redirectUri},
+    cache:{cacheLocation:'sessionStorage',storeAuthStateInCookie:false}
+  });
+  try{
+    const resp=await msalInstance.handleRedirectPromise();
+    if(resp){spAccount=resp.account;await onSignedIn();return;}
+    const accounts=msalInstance.getAllAccounts();
+    if(accounts.length>0){spAccount=accounts[0];await onSignedIn();return;}
+  }catch(e){console.error(e);}
+  $('login-msg').textContent='';
+});
+</script>
+</body>
+</html>
