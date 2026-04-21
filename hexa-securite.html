@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HEXA — Sécurité</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js" crossorigin="anonymous"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:#f5f6f8;color:#12161c;min-height:100vh;-webkit-font-smoothing:antialiased;}
+.page{max-width:720px;margin:0 auto;padding:20px 16px 80px;}
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-card{background:#fff;border-radius:20px;border:1px solid #e3e8ec;padding:40px 36px;max-width:420px;width:100%;text-align:center;}
+.login-logo{font-family:'Syne',sans-serif;font-size:42px;font-weight:800;color:#12161c;letter-spacing:-2px;margin-bottom:6px;}
+.login-logo span{color:#e04444;}
+.login-sub{font-size:14px;color:#7a8d97;margin-bottom:8px;}
+.login-module{font-size:13px;font-weight:600;color:#e04444;background:#fff5f5;border:1px solid #fca5a5;border-radius:20px;padding:4px 14px;display:inline-block;margin-bottom:28px;}
+.login-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#12161c;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;}
+#login-msg{font-size:12px;color:#7a8d97;margin-top:12px;}
+#login-err{font-size:12px;color:#e04444;margin-top:8px;display:none;}
+#app-screen{display:none;}
+.hdr{background:#12161c;border-radius:16px;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;letter-spacing:-1px;}
+.logo span{color:#e04444;}
+.av{width:34px;height:34px;border-radius:50%;background:rgba(224,68,68,.2);border:1px solid rgba(224,68,68,.3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#f87171;flex-shrink:0;}
+.view{display:none;}
+.view.active{display:block;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;}
+.btn:hover{opacity:.85;}
+.btn-red{background:#e04444;color:#fff;}
+.btn-grn{background:#2a9d6f;color:#fff;}
+.btn-outline{background:#fff;color:#12161c;border:1.5px solid #e3e8ec;}
+.btn-full{width:100%;justify-content:center;}
+.card{background:#fff;border-radius:14px;border:1px solid #e3e8ec;padding:20px;margin-bottom:12px;}
+.card-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#12161c;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.dot-r{width:8px;height:8px;border-radius:50%;background:#e04444;display:inline-block;}
+.dot-o{width:8px;height:8px;border-radius:50%;background:#c47d0a;display:inline-block;}
+.dot-b{width:8px;height:8px;border-radius:50%;background:#2abbda;display:inline-block;}
+.field{margin-bottom:12px;}
+.field label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;display:block;margin-bottom:5px;}
+.field input,.field textarea,.field select{width:100%;padding:10px 14px;border:1.5px solid #e3e8ec;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;color:#12161c;}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:#e04444;}
+.field textarea{height:72px;resize:vertical;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.info-box{background:#fff5f5;border:1px solid #fca5a5;border-radius:10px;padding:10px 14px;font-size:12px;color:#991b1b;margin-bottom:12px;line-height:1.6;}
+.warn-box{background:#fff7e6;border:1px solid #f5d98a;border-radius:10px;padding:10px 14px;font-size:12px;color:#7a4a10;line-height:1.6;margin-bottom:10px;}
+.ok-box{background:#eaf7f1;border:1px solid #a8dfc5;border-radius:10px;padding:10px 14px;font-size:12px;color:#1a5740;line-height:1.6;margin-bottom:10px;}
+.risk-item{background:#f8fafc;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #e3e8ec;}
+.risk-hdr{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;align-items:center;margin-bottom:6px;}
+.check-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f4f7;}
+.check-row:last-child{border-bottom:none;}
+.check-row input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:#e04444;flex-shrink:0;}
+.check-row label{font-size:13px;color:#12161c;cursor:pointer;flex:1;line-height:1.4;}
+.check-row .nc{font-size:10px;color:#7a8d97;white-space:nowrap;}
+.sig-container{position:relative;border:2px dashed #fca5a5;border-radius:12px;overflow:hidden;background:#fff;}
+.sig-canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
+.sig-clear{position:absolute;top:8px;right:8px;background:rgba(224,68,68,.1);color:#e04444;border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;}
+.doc-card{background:#fff;border-radius:14px;border:1px solid #e3e8ec;padding:20px;margin-bottom:10px;cursor:pointer;transition:border-color .15s,box-shadow .15s;display:flex;align-items:center;gap:16px;}
+.doc-card:hover{border-color:#e04444;box-shadow:0 4px 16px rgba(224,68,68,.08);}
+.doc-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.doc-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;margin-top:4px;display:inline-block;}
+.list-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #f0f4f7;cursor:pointer;}
+.list-item:last-child{border-bottom:none;}
+.list-item:hover{background:#f8fafc;margin:0 -20px;padding:11px 20px;}
+.ai-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1.5px solid #c4b8f8;background:#f0eeff;color:#6c5ce7;font-size:12px;font-weight:600;cursor:pointer;}
+.ai-btn:hover{background:#e4e0fb;}
+.ai-spin{display:none;width:14px;height:14px;border:2px solid #c4b8f8;border-top-color:#6c5ce7;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#12161c;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">HE<span>X</span>A</div>
+    <div class="login-sub">Groupe BCNC</div>
+    <div class="login-module">🦺 Sécurité chantier</div>
+    <button class="login-btn" onclick="doLogin()">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="1" y="1" width="8" height="8" fill="#F25022"/><rect x="11" y="1" width="8" height="8" fill="#7FBA00"/><rect x="1" y="11" width="8" height="8" fill="#00A4EF"/><rect x="11" y="11" width="8" height="8" fill="#FFB900"/></svg>
+      Se connecter avec Microsoft 365
+    </button>
+    <div id="login-msg"></div>
+    <div id="login-err"></div>
+  </div>
+</div>
+
+<div id="app-screen">
+<div class="page">
+
+  <div class="hdr">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <a href="hexa-accueil.html" style="color:#7a8d97;font-size:18px;text-decoration:none;line-height:1;">←</a>
+      <div class="logo">HE<span>X</span>A <span style="font-size:12px;font-weight:500;color:#7a8d97;letter-spacing:0;">Sécurité</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div style="text-align:right;"><div style="font-size:13px;font-weight:500;color:#fff;" id="hdr-name">—</div><div style="font-size:10px;color:#7a8d97;" id="hdr-role">—</div></div>
+      <div class="av" id="hdr-av">?</div>
+    </div>
+  </div>
+
+  <!-- VUE ACCUEIL MODULE -->
+  <div class="view active" id="view-home">
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:4px;">Documents sécurité</div>
+    <div style="font-size:13px;color:#7a8d97;margin-bottom:20px;">Génération et archivage des documents réglementaires</div>
+
+    <div class="doc-card" onclick="showView('view-ppsps-list')">
+      <div class="doc-icon" style="background:#fff5f5;">🛡️</div>
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:600;color:#12161c;">PPSPS</div>
+        <div style="font-size:12px;color:#7a8d97;margin-top:3px;line-height:1.5;">Plan Particulier de Sécurité et de Protection de la Santé. Obligatoire dès 2 entreprises en coactivité.</div>
+        <div class="doc-badge" style="background:#fff5f5;color:#991b1b;" id="badge-ppsps">—</div>
+      </div>
+      <div style="color:#e3e8ec;font-size:18px;">›</div>
+    </div>
+
+    <div class="doc-card" onclick="showView('view-echaf-list')">
+      <div class="doc-icon" style="background:#fff7e6;">🏗️</div>
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:600;color:#12161c;">PV de réception d'échafaudage</div>
+        <div style="font-size:12px;color:#7a8d97;margin-top:3px;line-height:1.5;">Checklist de réception normée — NF HD 1000 / EN 12811. Signature monteur + responsable chantier.</div>
+        <div class="doc-badge" style="background:#fff7e6;color:#7a4a10;" id="badge-echaf">—</div>
+      </div>
+      <div style="color:#e3e8ec;font-size:18px;">›</div>
+    </div>
+
+    <div class="doc-card" onclick="showView('view-pret-list')">
+      <div class="doc-icon" style="background:#eaf9fc;">📋</div>
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:600;color:#12161c;">Convention de prêt d'échafaudage</div>
+        <div style="font-size:12px;color:#7a8d97;margin-top:3px;line-height:1.5;">Formalise le prêt de matériel entre entreprises — responsabilités, assurance, restitution.</div>
+        <div class="doc-badge" style="background:#eaf9fc;color:#085670;" id="badge-pret">—</div>
+      </div>
+      <div style="color:#e3e8ec;font-size:18px;">›</div>
+    </div>
+
+    <div class="card" style="margin-top:8px;background:#fff5f5;border-color:#fca5a5;">
+      <div style="font-size:12px;color:#991b1b;line-height:1.7;">
+        <strong>⚖️ Rappel légal</strong><br>
+        Art. R4532-56 à R4532-74 Code du travail · Amende jusqu'à <strong>9 000 €</strong> en cas d'absence de PPSPS (15 000 € en récidive) · Délai de remise : 30 jours avant travaux · Conserver 5 ans
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       PPSPS — LISTE
+  ═══════════════════════════════════════════════════ -->
+  <div class="view" id="view-ppsps-list">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <button class="btn btn-outline" onclick="showView('view-home')" style="padding:8px 14px;">← Retour</button>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;flex:1;">PPSPS</div>
+      <button class="btn btn-red" onclick="openNewPPSPS()">+ Nouveau</button>
+    </div>
+    <div class="card"><div id="ppsps-list"><div style="text-align:center;padding:28px;font-size:13px;color:#7a8d97;">Aucun PPSPS créé</div></div></div>
+  </div>
+
+  <!-- PPSPS — FORMULAIRE -->
+  <div class="view" id="view-ppsps-form">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <button class="btn btn-outline" onclick="showView('view-ppsps-list');renderPPSPSList();" style="padding:8px 14px;">← Retour</button>
+      <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;flex:1;" id="ppsps-form-title">Nouveau PPSPS</div>
+    </div>
+
+    <!-- Légal -->
+    <div class="card" style="border-color:#fca5a5;">
+      <div class="card-title"><span class="dot-r"></span>Contexte réglementaire</div>
+      <div class="info-box">⚖️ Art. R4532-56 à R4532-74 Code du travail · Ce document doit être remis au coordonnateur SPS au moins <strong>30 jours</strong> avant le début des travaux (8 jours pour les sous-traitants).</div>
+      <div class="row3">
+        <div class="field"><label>Catégorie chantier</label>
+          <select id="pp-categorie">
+            <option value="3">Catégorie 3 — PPSPS simplifié (≥ 2 entreprises, < 500 h/j)</option>
+            <option value="2">Catégorie 2 — PPSPS complet (> 30j, > 20 pers.)</option>
+            <option value="1">Catégorie 1 — PPSPS complet (> 10 000 h/j)</option>
+          </select>
+        </div>
+        <div class="field"><label>Date de remise prévue</label><input type="date" id="pp-date-remise"></div>
+        <div class="field"><label>Date début des travaux</label><input type="date" id="pp-date-debut"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Coordonnateur SPS</label><input type="text" id="pp-csps" placeholder="Nom + organisme"></div>
+        <div class="field"><label>Email coordonnateur SPS</label><input type="email" id="pp-csps-email" placeholder="csps@organisme.fr"></div>
+      </div>
+    </div>
+
+    <!-- Entreprise + chantier -->
+    <div class="card">
+      <div class="card-title"><span class="dot-r"></span>Identification entreprise et chantier</div>
+      <div class="row2">
+        <div class="field"><label>Entreprise</label><select id="pp-entreprise" onchange="onPPEntrepriseChange()"><option value="">— Sélectionner —</option></select></div>
+        <div class="field"><label>Responsable d'exécution</label><input type="text" id="pp-responsable" placeholder="Prénom Nom"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Effectif prévu sur le chantier</label><input type="number" id="pp-effectif" placeholder="3" min="1"></div>
+        <div class="field"><label>Durée prévue des travaux</label><input type="text" id="pp-duree" placeholder="15 jours"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Chantier / Opération</label><input type="text" id="pp-chantier" placeholder="Résidence Les Pins"></div>
+        <div class="field"><label>Adresse du chantier</label><input type="text" id="pp-adresse" placeholder="10 Grande Rue, 38500 Voiron"></div>
+      </div>
+      <div class="field"><label>Maître d'ouvrage</label><input type="text" id="pp-moa" placeholder="Heurtier Voiron — Syndic"></div>
+      <div class="field"><label>Nature des travaux</label>
+        <select id="pp-type-travaux" onchange="onTypeTravauxChange()">
+          <option>Réfection étanchéité toiture-terrasse</option>
+          <option>Couverture toiture en pente</option>
+          <option>Pose membrane zinc / bac acier</option>
+          <option>Dépose amiante toiture</option>
+          <option>Isolation thermique par l'extérieur (ITE)</option>
+          <option>Ravalement de façade</option>
+          <option>Réparation et étanchéité toiture-terrasse</option>
+          <option>Autre</option>
+        </select>
+      </div>
+      <div class="field"><label>Description détaillée des travaux</label><textarea id="pp-description" style="height:80px;" placeholder="Décrire précisément les travaux à réaliser, le phasage, les zones d'intervention..."></textarea></div>
+    </div>
+
+    <!-- Moyens humains et matériels -->
+    <div class="card">
+      <div class="card-title"><span class="dot-r"></span>Moyens humains et matériels</div>
+      <div class="row2">
+        <div class="field"><label>Qualifications / habilitations</label><textarea id="pp-qualif" style="height:60px;" placeholder="Ex: CATEC, travaux en hauteur, habilitation électrique B0..."></textarea></div>
+        <div class="field"><label>Matériel principal utilisé</label><textarea id="pp-materiel" style="height:60px;" placeholder="Ex: Échafaudage de pied, nacelle, torche à gaz, pompe à bitume..."></textarea></div>
+      </div>
+      <div class="field"><label>Horaires de travail prévus</label><input type="text" id="pp-horaires" placeholder="Lundi–Vendredi, 7h30–17h00 · Pas de travail de nuit"></div>
+    </div>
+
+    <!-- Analyse des risques — IA -->
+    <div class="card" style="border-color:#c4b8f8;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div class="card-title" style="margin-bottom:0;"><span class="dot-r" style="background:#6c5ce7;"></span>Analyse des risques et mesures de prévention</div>
+        <button class="ai-btn" onclick="genererRisquesIA()">
+          <div class="ai-spin" id="ai-spin"></div>
+          ✨ Générer avec l'IA
+        </button>
+      </div>
+      <div class="warn-box">L'IA pré-remplit les risques typiques selon la nature des travaux. Vérifiez et adaptez à votre chantier spécifique.</div>
+      <div id="risks-list"></div>
+      <button class="btn btn-outline" onclick="addRisk()" style="font-size:12px;padding:8px 14px;margin-top:8px;">+ Ajouter un risque</button>
+    </div>
+
+    <!-- EPI -->
+    <div class="card">
+      <div class="card-title"><span class="dot-r"></span>Équipements de Protection Individuelle (EPI)</div>
+      <div id="epi-list">
+        <div class="check-row"><input type="checkbox" id="epi-1" checked><label for="epi-1">Casque de protection</label><span class="nc">Obligatoire</span></div>
+        <div class="check-row"><input type="checkbox" id="epi-2" checked><label for="epi-2">Chaussures de sécurité S3</label><span class="nc">Obligatoire</span></div>
+        <div class="check-row"><input type="checkbox" id="epi-3" checked><label for="epi-3">Harnais antichute + longe</label><span class="nc">Hauteur > 3m</span></div>
+        <div class="check-row"><input type="checkbox" id="epi-4" checked><label for="epi-4">Gilet haute visibilité</label><span class="nc">Chantier actif</span></div>
+        <div class="check-row"><input type="checkbox" id="epi-5"><label for="epi-5">Gants de manutention</label><span class="nc">Manutention</span></div>
+        <div class="check-row"><input type="checkbox" id="epi-6"><label for="epi-6">Lunettes de protection</label><span class="nc">Produits chimiques</span></div>
+        <div class="check-row"><input type="checkbox" id="epi-7"><label for="epi-7">Masque respiratoire FFP2</label><span class="nc">Poussières / amiante</span></div>
+        <div class="check-row"><input type="checkbox" id="epi-8"><label for="epi-8">Protection auditive</label><span class="nc">Bruit > 85 dB</span></div>
+      </div>
+    </div>
+
+    <!-- Secours -->
+    <div class="card" style="border-color:#fca5a5;">
+      <div class="card-title"><span class="dot-r"></span>Organisation des secours</div>
+      <div class="info-box">⚠️ Ces informations doivent être affichées sur le chantier et connues de tous les intervenants.</div>
+      <div class="row2">
+        <div class="field"><label>Sauveteur Secouriste du Travail (SST)</label><input type="text" id="pp-sst" placeholder="Prénom Nom — mobile"></div>
+        <div class="field"><label>Nombre de SST sur le chantier</label><input type="number" id="pp-nb-sst" value="1" min="0"></div>
+      </div>
+      <div class="row3">
+        <div class="field"><label>SAMU</label><input type="text" id="pp-samu" value="15" readonly style="background:#f5f6f8;font-weight:600;"></div>
+        <div class="field"><label>Pompiers</label><input type="text" id="pp-pompiers" value="18" readonly style="background:#f5f6f8;font-weight:600;"></div>
+        <div class="field"><label>SAMU / Pompiers (EU)</label><input type="text" id="pp-eu" value="112" readonly style="background:#f5f6f8;font-weight:600;"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Hôpital / SMUR le plus proche</label><input type="text" id="pp-hopital" placeholder="CHU Grenoble — 2.5 km"></div>
+        <div class="field"><label>Matériel de premiers secours</label><input type="text" id="pp-materiel-secours" placeholder="Trousse de secours sur le chantier"></div>
+      </div>
+      <div class="field"><label>Procédure d'évacuation</label><textarea id="pp-evacuation" style="height:60px;" placeholder="En cas d'accident grave : prévenir le responsable, appeler le 15 ou 18, ne pas déplacer la victime sauf danger immédiat, baliser la zone..."></textarea></div>
+    </div>
+
+    <!-- Coactivité -->
+    <div class="card">
+      <div class="card-title"><span class="dot-r"></span>Coactivité et autres entreprises</div>
+      <div class="field"><label>Autres entreprises présentes simultanément</label><textarea id="pp-coactivite" style="height:60px;" placeholder="Ex: Entreprise XYZ — électricité — intervention du 15 au 20 mars — zones A et B..."></textarea></div>
+      <div class="field"><label>Mesures de coordination prévues</label><textarea id="pp-coordination" style="height:60px;" placeholder="Réunion hebdomadaire de chantier le lundi 8h · Zones de travail délimitées · Pas d'intervention simultanée en toiture..."></textarea></div>
+    </div>
+
+    <!-- Signature -->
+    <div class="card">
+      <div class="card-title"><span class="dot-r"></span>Signature et validation</div>
+      <div class="row2">
+        <div class="field"><label>Lieu</label><input type="text" id="pp-lieu" placeholder="Bernin"></div>
+        <div class="field"><label>Date de signature</label><input type="date" id="pp-date-sig"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin-bottom:6px;">Signature du responsable</div>
+        <div style="font-size:12px;color:#12161c;margin-bottom:8px;" id="pp-sig-name">—</div>
+        <div class="sig-container">
+          <canvas class="sig-canvas" id="pp-sig" width="600" height="120"></canvas>
+          <button class="sig-clear" onclick="clearSig('pp-sig')">Effacer</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="savePPSPS()" style="flex:1;">💾 Sauvegarder</button>
+      <button class="btn btn-outline" onclick="sendPPSPS()" style="flex:1;">✉️ Envoyer au CSPS</button>
+      <button class="btn btn-red" onclick="genererPPSPS()" style="flex:2;">📄 Générer le PPSPS</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       PV RÉCEPTION ÉCHAFAUDAGE — LISTE
+  ═══════════════════════════════════════════════════ -->
+  <div class="view" id="view-echaf-list">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <button class="btn btn-outline" onclick="showView('view-home')" style="padding:8px 14px;">← Retour</button>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;flex:1;">PV Réception échafaudage</div>
+      <button class="btn btn-red" style="background:#c47d0a;" onclick="openNewEchaf()">+ Nouveau</button>
+    </div>
+    <div class="card"><div id="echaf-list"><div style="text-align:center;padding:28px;font-size:13px;color:#7a8d97;">Aucun PV créé</div></div></div>
+  </div>
+
+  <!-- PV RÉCEPTION ÉCHAFAUDAGE — FORMULAIRE -->
+  <div class="view" id="view-echaf-form">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <button class="btn btn-outline" onclick="showView('view-echaf-list');renderEchafList();" style="padding:8px 14px;">← Retour</button>
+      <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;flex:1;" id="echaf-form-title">Nouveau PV réception</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot-o"></span>Identification du chantier</div>
+      <div class="row2">
+        <div class="field"><label>Chantier</label><input type="text" id="ec-chantier" placeholder="Résidence Les Pins"></div>
+        <div class="field"><label>Adresse</label><input type="text" id="ec-adresse" placeholder="10 Grande Rue, Voiron"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Entreprise utilisatrice</label><select id="ec-entreprise"><option value="">— Sélectionner —</option></select></div>
+        <div class="field"><label>Date de réception</label><input type="date" id="ec-date"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot-o"></span>Identification de l'échafaudage</div>
+      <div class="row2">
+        <div class="field"><label>Type d'échafaudage</label>
+          <select id="ec-type">
+            <option>Échafaudage de pied (tubulaire)</option>
+            <option>Échafaudage sur cadres</option>
+            <option>Échafaudage roulant (tour)</option>
+            <option>Échafaudage suspendu</option>
+            <option>Échafaudage de toit / chevalet</option>
+          </select>
+        </div>
+        <div class="field"><label>Marque / fabricant</label><input type="text" id="ec-marque" placeholder="Layher, Plettac, Haki..."></div>
+      </div>
+      <div class="row3">
+        <div class="field"><label>Hauteur (m)</label><input type="number" id="ec-hauteur" placeholder="8" min="0" step="0.5"></div>
+        <div class="field"><label>Longueur (m)</label><input type="number" id="ec-longueur" placeholder="12" min="0" step="0.5"></div>
+        <div class="field"><label>Charge admissible (kg/m²)</label><input type="number" id="ec-charge" placeholder="200" min="0"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Entreprise monteuse</label><input type="text" id="ec-monteur-ent" placeholder="Société échafaudage"></div>
+        <div class="field"><label>Monteur responsable</label><input type="text" id="ec-monteur-nom" placeholder="Prénom Nom"></div>
+      </div>
+      <div class="field"><label>Note de calcul / fiche technique</label><input type="text" id="ec-note-calcul" placeholder="Réf. note de calcul ou NA"></div>
+    </div>
+
+    <!-- CHECKLIST NORMÉE -->
+    <div class="card" style="border-color:#f5d98a;">
+      <div class="card-title"><span class="dot-o"></span>Checklist de réception — NF HD 1000 / EN 12811</div>
+      <div class="warn-box">Cochez chaque point après vérification physique. Tout point non conforme doit être corrigé avant utilisation.</div>
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin:12px 0 8px;">Ancrage et stabilité</div>
+      <div id="cl-ancrage">
+        <div class="check-row"><input type="checkbox" id="cl-1"><label for="cl-1">Ancrages en nombre suffisant et conformes (1 ancrage/14m² de surface de vent)</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-2"><label for="cl-2">Vérins de pied réglés et calés sur surface stable</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-3"><label for="cl-3">Contreventements en place (diagonales)</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-4"><label for="cl-4">Distance max au mur respectée (≤ 30 cm)</label></div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin:12px 0 8px;">Planchers de travail</div>
+      <div id="cl-planchers">
+        <div class="check-row"><input type="checkbox" id="cl-5"><label for="cl-5">Planchers couvrant toute la largeur (≥ 60 cm)</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-6"><label for="cl-6">Absence de vide entre planchers et structure</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-7"><label for="cl-7">Planchers verrouillés et non glissants</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-8"><label for="cl-8">Plinthe (lisse de pied) de 15 cm minimum</label></div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin:12px 0 8px;">Garde-corps</div>
+      <div id="cl-gc">
+        <div class="check-row"><input type="checkbox" id="cl-9"><label for="cl-9">Lisse principale à 1m (± 5 cm) de hauteur</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-10"><label for="cl-10">Sous-lisse à 45-50 cm de hauteur</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-11"><label for="cl-11">Garde-corps sur tous les côtés exposés au vide</label></div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin:12px 0 8px;">Accès et circulations</div>
+      <div id="cl-acces">
+        <div class="check-row"><input type="checkbox" id="cl-12"><label for="cl-12">Trappe d'accès avec échelle intégrée</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-13"><label for="cl-13">Accès sécurisé à chaque niveau</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-14"><label for="cl-14">Signalisation et balisage au sol</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-15"><label for="cl-15">Accès des secours non bloqué</label></div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin:12px 0 8px;">Conformité générale</div>
+      <div id="cl-conformite">
+        <div class="check-row"><input type="checkbox" id="cl-16"><label for="cl-16">Charge admissible affichée sur l'échafaudage</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-17"><label for="cl-17">Notice d'utilisation disponible sur le chantier</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-18"><label for="cl-18">Aucun élément endommagé ou déformé visible</label></div>
+        <div class="check-row"><input type="checkbox" id="cl-19"><label for="cl-19">Conformité au plan de montage</label></div>
+      </div>
+
+      <div class="field" style="margin-top:14px;"><label>Observations / réserves</label><textarea id="ec-observations" style="height:60px;" placeholder="Indiquez ici les non-conformités constatées ou les conditions particulières d'utilisation..."></textarea></div>
+
+      <div style="margin-top:10px;padding:10px 14px;background:#eaf7f1;border:1px solid #a8dfc5;border-radius:10px;font-size:12px;color:#1a5740;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="ec-conforme" style="width:18px;height:18px;accent-color:#2a9d6f;">
+          <span><strong>Je certifie que l'échafaudage est conforme</strong> aux exigences réglementaires et peut être utilisé en sécurité par les intervenants du chantier.</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Signatures -->
+    <div class="card">
+      <div class="card-title"><span class="dot-o"></span>Signatures</div>
+      <div class="row2">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin-bottom:4px;">Monteur responsable</div>
+          <div style="font-size:12px;margin-bottom:8px;" id="ec-sig-monteur-name">—</div>
+          <div class="sig-container" style="border-color:#f5d98a;">
+            <canvas class="sig-canvas" id="ec-sig-monteur" width="300" height="110"></canvas>
+            <button class="sig-clear" style="background:rgba(196,125,10,.1);color:#c47d0a;" onclick="clearSig('ec-sig-monteur')">Effacer</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin-bottom:4px;">Responsable chantier</div>
+          <div style="font-size:12px;margin-bottom:8px;" id="ec-sig-resp-name">—</div>
+          <div class="sig-container" style="border-color:#f5d98a;">
+            <canvas class="sig-canvas" id="ec-sig-resp" width="300" height="110"></canvas>
+            <button class="sig-clear" style="background:rgba(196,125,10,.1);color:#c47d0a;" onclick="clearSig('ec-sig-resp')">Effacer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" onclick="saveEchaf()" style="flex:1;">💾 Sauvegarder</button>
+      <button class="btn btn-red btn-full" style="flex:2;background:#c47d0a;" onclick="genererEchaf()">📄 Générer le PV</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       CONVENTION DE PRÊT — LISTE
+  ═══════════════════════════════════════════════════ -->
+  <div class="view" id="view-pret-list">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <button class="btn btn-outline" onclick="showView('view-home')" style="padding:8px 14px;">← Retour</button>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;flex:1;">Convention de prêt</div>
+      <button class="btn btn-red" style="background:#2abbda;" onclick="openNewPret()">+ Nouveau</button>
+    </div>
+    <div class="card"><div id="pret-list"><div style="text-align:center;padding:28px;font-size:13px;color:#7a8d97;">Aucune convention créée</div></div></div>
+  </div>
+
+  <!-- CONVENTION DE PRÊT — FORMULAIRE -->
+  <div class="view" id="view-pret-form">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <button class="btn btn-outline" onclick="showView('view-pret-list');renderPretList();" style="padding:8px 14px;">← Retour</button>
+      <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;flex:1;" id="pret-form-title">Nouvelle convention</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot-b"></span>Parties</div>
+      <div style="font-size:12px;font-weight:600;color:#7a8d97;margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Prêteur</div>
+      <div class="row2">
+        <div class="field"><label>Entreprise prêteuse</label><select id="pr-preteur"><option value="">— Sélectionner —</option></select></div>
+        <div class="field"><label>Représentant prêteur</label><input type="text" id="pr-preteur-rep" placeholder="Prénom Nom"></div>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:#7a8d97;margin-top:8px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">Emprunteur</div>
+      <div class="row2">
+        <div class="field"><label>Entreprise emprunteuse</label><input type="text" id="pr-emprunteur" placeholder="Société emprunteuse"></div>
+        <div class="field"><label>Représentant emprunteur</label><input type="text" id="pr-emprunteur-rep" placeholder="Prénom Nom"></div>
+      </div>
+      <div class="field"><label>Adresse emprunteur</label><input type="text" id="pr-emprunteur-adresse" placeholder="Adresse complète"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot-b"></span>Matériel prêté</div>
+      <div class="field"><label>Description du matériel</label><textarea id="pr-materiel" style="height:70px;" placeholder="Ex: Échafaudage de pied tubulaire — hauteur 8m — longueur 10m — 3 niveaux de planchers — comprenant : 24 cadres, 48 planchers alu, accessoires d'ancrage..."></textarea></div>
+      <div class="row2">
+        <div class="field"><label>État du matériel au départ</label>
+          <select id="pr-etat">
+            <option>Bon état général</option>
+            <option>État correct — quelques traces d'usure</option>
+            <option>État moyen — à noter ci-dessous</option>
+          </select>
+        </div>
+        <div class="field"><label>Valeur estimée du matériel (€)</label><input type="number" id="pr-valeur" placeholder="4500" min="0"></div>
+      </div>
+      <div class="field"><label>Observations sur l'état (si nécessaire)</label><textarea id="pr-etat-obs" style="height:50px;" placeholder="Décrire tout élément endommagé ou particularité..."></textarea></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot-b"></span>Conditions du prêt</div>
+      <div class="row2">
+        <div class="field"><label>Chantier de destination</label><input type="text" id="pr-chantier" placeholder="Résidence Les Pins, Voiron"></div>
+        <div class="field"><label>Date de mise à disposition</label><input type="date" id="pr-date-debut"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Date de restitution prévue</label><input type="date" id="pr-date-fin"></div>
+        <div class="field"><label>Conditions financières</label>
+          <select id="pr-conditions">
+            <option>Prêt à titre gratuit</option>
+            <option>Prêt contre facturation de transport</option>
+            <option>Location — tarif défini séparément</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#b3eaf4;">
+      <div class="card-title"><span class="dot-b"></span>Responsabilités et obligations</div>
+      <div class="ok-box">📋 Clauses légales standard — modifiables si nécessaire</div>
+      <div class="field"><label>Obligations de l'emprunteur</label>
+        <textarea id="pr-obligations" style="height:90px;">L'emprunteur s'engage à :
+• Monter et démonter l'échafaudage par du personnel compétent et habilité
+• N'utiliser le matériel que pour l'usage prévu et sur le chantier indiqué
+• Maintenir le matériel en bon état de fonctionnement
+• Souscrire une assurance couvrant le matériel pour la durée du prêt
+• Restituer le matériel complet, propre et en bon état à la date convenue
+• Assumer les frais de réparation ou remplacement en cas de dégradation</textarea>
+      </div>
+      <div class="field"><label>Responsabilité du prêteur</label>
+        <textarea id="pr-resp-preteur" style="height:60px;">Le prêteur met à disposition le matériel en l'état au jour de la remise. Il ne saurait être tenu responsable des accidents ou dommages survenus lors de l'utilisation du matériel par l'emprunteur ou ses préposés.</textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot-b"></span>Signatures</div>
+      <div class="row2">
+        <div class="field"><label>Lieu</label><input type="text" id="pr-lieu" placeholder="Bernin"></div>
+        <div class="field"><label>Date</label><input type="date" id="pr-date-sig"></div>
+      </div>
+      <div class="row2">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin-bottom:4px;">Signature prêteur</div>
+          <div style="font-size:12px;margin-bottom:8px;" id="pr-sig-preteur-name">—</div>
+          <div class="sig-container" style="border-color:#b3eaf4;">
+            <canvas class="sig-canvas" id="pr-sig-preteur" width="300" height="110"></canvas>
+            <button class="sig-clear" style="background:rgba(42,187,218,.1);color:#2abbda;" onclick="clearSig('pr-sig-preteur')">Effacer</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin-bottom:4px;">Signature emprunteur</div>
+          <div style="font-size:12px;margin-bottom:8px;" id="pr-sig-emprunteur-name">—</div>
+          <div class="sig-container" style="border-color:#b3eaf4;">
+            <canvas class="sig-canvas" id="pr-sig-emprunteur" width="300" height="110"></canvas>
+            <button class="sig-clear" style="background:rgba(42,187,218,.1);color:#2abbda;" onclick="clearSig('pr-sig-emprunteur')">Effacer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" onclick="savePret()" style="flex:1;">💾 Sauvegarder</button>
+      <button class="btn btn-red btn-full" style="flex:2;background:#2abbda;" onclick="genererPret()">📄 Générer la convention</button>
+    </div>
+  </div>
+
+</div>
+</div>
+<div id="toast"></div>
+
+<script>
+const SP_CONFIG={clientId:'ce885b92-7692-4ca5-aae6-756a5e94a792',tenantId:'de95b546-4d79-47f1-aafe-8926ca63e424',authority:'https://login.microsoftonline.com/de95b546-4d79-47f1-aafe-8926ca63e424',redirectUri:'https://bannequin.github.io/hexa/hexa-accueil.html',spSite:'https://martincharpentefr.sharepoint.com',scopes:['User.Read','Files.ReadWrite.All','Sites.ReadWrite.All','Mail.Send','offline_access']};
+const ADMIN_EMAILS=['ba@groupebcnc.com','ca@groupebcnc.com','li@alptech-etancheite.fr'];
+let msalInstance=null,spAccount=null,spToken=null,spSiteId=null,spListId=null,currentEmail='',currentRole='',currentName='';
+let DB={interventions:[],pvReceptions:[],entreprises:[],techniciens:[],ppsps:[],pvEchafaudages:[],conventionsPret:[]};
+let ppRisks=[],editingPPId=null,editingEcId=null,editingPrId=null;
+
+function $(id){return document.getElementById(id);}
+function ini(n){return(n||'').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();}
+function toast(msg,dur=3500){const el=$('toast');el.textContent=msg;el.style.opacity='1';setTimeout(()=>el.style.opacity='0',dur);}
+function fmtD(d){if(!d)return'—';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;}
+function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(id)?.classList.add('active');}
+
+async function graphCall(m,url,body=null){await spGetToken();const opts={method:m,headers:{'Authorization':'Bearer '+spToken,'Content-Type':'application/json'}};if(body)opts.body=JSON.stringify(body);const r=await fetch(url,opts);if(!r.ok&&r.status!==204&&r.status!==202)throw new Error('Graph '+r.status);if(r.status===204||r.status===202)return{};return r.json();}
+async function spGetToken(){try{const r=await msalInstance.acquireTokenSilent({scopes:SP_CONFIG.scopes,account:spAccount});spToken=r.accessToken;return spToken;}catch(e){try{const r=await msalInstance.acquireTokenPopup({scopes:SP_CONFIG.scopes,account:spAccount});spToken=r.accessToken;return spToken;}catch(e2){return null;}}}
+async function spInit(){try{const base='https://graph.microsoft.com/v1.0';const site=await graphCall('GET',`${base}/sites/${SP_CONFIG.spSite.replace('https://','')}`);spSiteId=site.id;const lists=await graphCall('GET',`${base}/sites/${spSiteId}/lists?$filter=displayName eq 'HexaDB'`);if(!lists.value?.length)return false;spListId=lists.value[0].id;return true;}catch(e){return false;}}
+async function spPull(){try{const base='https://graph.microsoft.com/v1.0';const items=await graphCall('GET',`${base}/sites/${spSiteId}/lists/${spListId}/items?$expand=fields`);const main=items.value?.find(i=>i.fields?.HexaKey==='main_db');if(!main)return;Object.assign(DB,JSON.parse(main.fields.HexaData));try{localStorage.setItem('hexa_db2',JSON.stringify(DB));}catch(e){}}catch(e){}}
+async function spPush(){try{const base='https://graph.microsoft.com/v1.0';const clean=JSON.parse(JSON.stringify(DB));clean.entreprises=clean.entreprises?.map(e=>({...e,logo:null}));const json=JSON.stringify(clean);const items=await graphCall('GET',`${base}/sites/${spSiteId}/lists/${spListId}/items?$expand=fields`);const main=items.value?.find(i=>i.fields?.HexaKey==='main_db');if(main)await graphCall('PATCH',`${base}/sites/${spSiteId}/lists/${spListId}/items/${main.id}/fields`,{HexaData:json});}catch(e){console.warn('spPush:',e);}}
+function saveDB(){DB._v=Date.now();try{localStorage.setItem('hexa_db2',JSON.stringify(DB));}catch(e){}spPush();}
+
+async function getRole(em){if(ADMIN_EMAILS.includes(em))return'admin';if((DB.groupe?.adminEmail||'').toLowerCase()===em)return'admin';if((DB.entreprises||[]).some(e=>e.directeur?.email?.toLowerCase()===em))return'directeur';const a=(DB.acces||[]).find(a=>a.email?.toLowerCase()===em);if(a)return a.role||'admin';return null;}
+
+async function doLogin(){try{$('login-msg').textContent='Connexion...';if(!msalInstance)msalInstance=new msal.PublicClientApplication({auth:{clientId:SP_CONFIG.clientId,authority:SP_CONFIG.authority,redirectUri:SP_CONFIG.redirectUri},cache:{cacheLocation:'sessionStorage',storeAuthStateInCookie:false}});await msalInstance.loginRedirect({scopes:SP_CONFIG.scopes});}catch(e){$('login-err').textContent='Erreur : '+e.message;$('login-err').style.display='block';}}
+
+async function onSignedIn(){
+  $('login-msg').textContent='Chargement...';
+  try{const d=localStorage.getItem('hexa_db2');if(d)Object.assign(DB,JSON.parse(d));}catch(e){}
+  if(!DB.ppsps)DB.ppsps=[];if(!DB.pvEchafaudages)DB.pvEchafaudages=[];if(!DB.conventionsPret)DB.conventionsPret=[];
+  const spOk=await spInit();if(spOk)await spPull();
+  currentEmail=spAccount.username?.toLowerCase()||'';
+  currentName=spAccount.name||spAccount.username;
+  currentRole=await getRole(currentEmail);
+  if(!currentRole||currentRole==='technicien'){$('login-err').textContent='Accès réservé aux directeurs et conducteurs.';$('login-err').style.display='block';$('login-msg').textContent='';return;}
+  $('login-screen').style.display='none';
+  $('app-screen').style.display='block';
+  const rl={admin:'Administrateur',directeur:'Directeur',conducteur:'Conducteur de travaux'};
+  $('hdr-name').textContent=currentName;$('hdr-role').textContent=rl[currentRole]||currentRole;$('hdr-av').textContent=ini(currentName);
+  initEntreprises();initSigCanvases();updateBadges();
+}
+
+function initEntreprises(){
+  const opts='<option value="">— Sélectionner —</option>'+(DB.entreprises||[]).map(e=>`<option value="${e.id}">${e.nom}</option>`).join('');
+  ['pp-entreprise','ec-entreprise','pr-preteur'].forEach(id=>{if($(id))$(id).innerHTML=opts;});
+  $('pr-preteur')?.addEventListener('change',()=>{
+    const ent=(DB.entreprises||[]).find(e=>e.id===$('pr-preteur').value);
+    if(ent){$('pr-preteur-rep').value=ent.directeur?.nom||'';$('pr-sig-preteur-name').textContent=ent.directeur?.nom||'—';}
+  });
+  $('pp-entreprise')?.addEventListener('change',onPPEntrepriseChange);
+  $('ec-entreprise')?.addEventListener('change',()=>{
+    const ent=(DB.entreprises||[]).find(e=>e.id===$('ec-entreprise').value);
+    if(ent)$('ec-sig-resp-name').textContent=ent.directeur?.nom||currentName;
+  });
+}
+function onPPEntrepriseChange(){
+  const ent=(DB.entreprises||[]).find(e=>e.id===$('pp-entreprise').value);
+  if(ent){$('pp-responsable').value=ent.directeur?.nom||currentName;$('pp-sig-name').textContent=ent.directeur?.nom||currentName;}
+}
+function onTypeTravauxChange(){ppRisks=[];renderRisks();}
+
+function updateBadges(){
+  const n1=(DB.ppsps||[]).length,n2=(DB.pvEchafaudages||[]).length,n3=(DB.conventionsPret||[]).length;
+  $('badge-ppsps').textContent=n1?`${n1} document${n1>1?'s':''}`:  'Aucun document';
+  $('badge-echaf').textContent=n2?`${n2} PV`:  'Aucun PV';
+  $('badge-pret').textContent=n3?`${n3} convention${n3>1?'s':''}`:  'Aucune convention';
+}
+
+// ── SIGNATURES ────────────────────────────────────────────────────────────────
+function initSigCanvases(){['pp-sig','ec-sig-monteur','ec-sig-resp','pr-sig-preteur','pr-sig-emprunteur'].forEach(id=>initSigCanvas(id));}
+function initSigCanvas(id){
+  const canvas=$(id);if(!canvas)return;
+  const ctx=canvas.getContext('2d');ctx.strokeStyle='#12161c';ctx.lineWidth=2;ctx.lineCap='round';ctx.lineJoin='round';
+  let drawing=false,lx=0,ly=0;
+  function gp(e){const rect=canvas.getBoundingClientRect();const s=e.touches?e.touches[0]:e;return{x:(s.clientX-rect.left)*(canvas.width/rect.width),y:(s.clientY-rect.top)*(canvas.height/rect.height)};}
+  canvas.addEventListener('mousedown',e=>{drawing=true;const p=gp(e);lx=p.x;ly=p.y;});
+  canvas.addEventListener('mousemove',e=>{if(!drawing)return;const p=gp(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.stroke();lx=p.x;ly=p.y;});
+  canvas.addEventListener('mouseup',()=>drawing=false);canvas.addEventListener('mouseleave',()=>drawing=false);
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=gp(e);lx=p.x;ly=p.y;},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!drawing)return;const p=gp(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.stroke();lx=p.x;ly=p.y;},{passive:false});
+  canvas.addEventListener('touchend',()=>drawing=false);
+}
+function clearSig(id){const c=$(id);if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);}
+function getSig(id){const c=$(id);if(!c)return'';const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;return d.some((v,i)=>i%4===3&&v>0)?c.toDataURL('image/png'):'';}
+
+// ── RISQUES ────────────────────────────────────────────────────────────────────
+const RISQUES_PAR_TYPE={
+  'Réfection étanchéité toiture-terrasse':[
+    {phase:'Préparation',risque:'Chute de hauteur en bord de toiture',gravite:'critique',prevention:'Mise en place de garde-corps périmétraux, harnais antichute avec point d\'ancrage certifié, balisage du périmètre de sécurité au sol'},
+    {phase:'Dépose ancienne étanchéité',risque:'Présence d\'amiante dans les anciennes membranes',gravite:'critique',prevention:'Diagnostic amiante obligatoire avant travaux — si présence : procédure SS4 ou encapsulage, port EPI amiante obligatoire'},
+    {phase:'Préparation support',risque:'Brûlures par torche à gaz / bitume chaud',gravite:'grave',prevention:'Formation obligatoire, EPI adaptés (gants thermiques, lunettes), zone de travail dégagée, extincteur à proximité'},
+    {phase:'Pose membrane',risque:'Glissade sur surface bitumineuse en pente',gravite:'grave',prevention:'Chaussures de sécurité avec semelles antidérapantes adaptées, cordage de retenue si pente > 10%'},
+    {phase:'Toutes phases',risque:'Chute d\'objet sur les personnes au sol',gravite:'grave',prevention:'Balisage strict de la zone de travail, filet de protection ou bâche en périphérie, casque obligatoire dans la zone'}
+  ],
+  'Couverture toiture en pente':[
+    {phase:'Accès toiture',risque:'Chute de hauteur sur pente',gravite:'critique',prevention:'Échafaudage de pied avec accès sécurisé, échelle de couvreur ancrée, harnais antichute obligatoire pour pente > 45%'},
+    {phase:'Manutention matériaux',risque:'Chute de tuiles / matériaux vers le bas',gravite:'critique',prevention:'Balisage zone de 6m au sol, filets de protection, monte-matériaux sécurisé'},
+    {phase:'Travaux en pente',risque:'Glissade sur surface mouillée / verglacée',gravite:'critique',prevention:'Vérification météo avant intervention, chaussures antidérapantes, arrêt des travaux si conditions dangereuses'},
+    {phase:'Dépose',risque:'Inhalation de poussières (amiante)',gravite:'critique',prevention:'Diagnostic amiante préalable obligatoire'},
+    {phase:'Toutes phases',risque:'Électrocution — proximité lignes électriques',gravite:'critique',prevention:'Vérification distance aux lignes HTA, consignation si < 3m, coordination avec le gestionnaire réseau'}
+  ],
+  'default':[
+    {phase:'Toutes phases',risque:'Chute de hauteur',gravite:'critique',prevention:'Harnais antichute, points d\'ancrage certifiés, garde-corps, balisage'},
+    {phase:'Toutes phases',risque:'Chute d\'objet',gravite:'grave',prevention:'Balisage zone de travail, filets, casque obligatoire'},
+    {phase:'Manutention',risque:'Troubles musculo-squelettiques (TMS)',gravite:'moyen',prevention:'Port de charges limité à 25kg, aide mécanique pour charges lourdes, postures adaptées'},
+    {phase:'Outillage',risque:'Blessures par outils / matériaux',gravite:'moyen',prevention:'EPI adaptés, rangement des outils, formation à l\'utilisation'}
+  ]
+};
+
+async function genererRisquesIA(){
+  const type=$('pp-type-travaux')?.value||'default';
+  const description=$('pp-description')?.value||'';
+  const btn=document.querySelector('.ai-btn');
+  const spin=$('ai-spin');
+  if(spin)spin.style.display='inline-block';
+  if(btn)btn.style.pointerEvents='none';
+  try{
+    // Utiliser les risques prédéfinis comme base + enrichir avec l'IA si disponible
+    const base=RISQUES_PAR_TYPE[type]||RISQUES_PAR_TYPE['default'];
+    const apiKey=DB.apiKey||'';
+    if(apiKey){
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',max_tokens:1500,
+        system:'Tu es un expert sécurité BTP. Génère une analyse de risques PPSPS en JSON uniquement, sans markdown. Format: [{"phase":"...","risque":"...","gravite":"critique|grave|moyen","prevention":"..."}]. Maximum 6 risques.',
+        messages:[{role:'user',content:`Travaux: ${type}. Description: ${description||'Travaux de toiture standard'}. Génère 5-6 risques principaux adaptés.`}]
+      })});
+      const data=await resp.json();
+      const txt=data.content?.[0]?.text||'';
+      try{ppRisks=JSON.parse(txt.replace(/```json|```/g,'').trim());}catch(e){ppRisks=base;}
+    }else{ppRisks=base;}
+  }catch(e){ppRisks=RISQUES_PAR_TYPE[type]||RISQUES_PAR_TYPE['default'];}
+  if(spin)spin.style.display='none';
+  if(btn)btn.style.pointerEvents='auto';
+  renderRisks();toast(`✓ ${ppRisks.length} risques générés`);
+}
+
+function addRisk(){ppRisks.push({phase:'',risque:'',gravite:'grave',prevention:''});renderRisks();}
+function removeRisk(i){ppRisks.splice(i,1);renderRisks();}
+function renderRisks(){
+  const graviteColors={critique:{bg:'#fff5f5',c:'#991b1b',txt:'🔴 Critique'},grave:{bg:'#fff7e6',c:'#7a4a10',txt:'🟠 Grave'},moyen:{bg:'#fffdf0',c:'#6b5200',txt:'🟡 Modéré'}};
+  $('risks-list').innerHTML=ppRisks.map((r,i)=>`
+    <div class="risk-item">
+      <div class="risk-hdr">
+        <input type="text" value="${r.phase||''}" onchange="ppRisks[${i}].phase=this.value" placeholder="Phase de chantier" style="padding:7px 10px;border:1px solid #e3e8ec;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;">
+        <input type="text" value="${r.risque||''}" onchange="ppRisks[${i}].risque=this.value" placeholder="Risque identifié" style="padding:7px 10px;border:1px solid #e3e8ec;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;">
+        <select onchange="ppRisks[${i}].gravite=this.value" style="padding:7px;border:1px solid #e3e8ec;border-radius:8px;font-size:12px;outline:none;background:${graviteColors[r.gravite]?.bg||'#fff'};">
+          <option value="critique" ${r.gravite==='critique'?'selected':''}>🔴 Critique</option>
+          <option value="grave" ${r.gravite==='grave'?'selected':''}>🟠 Grave</option>
+          <option value="moyen" ${r.gravite==='moyen'?'selected':''}>🟡 Modéré</option>
+        </select>
+        <button onclick="removeRisk(${i})" style="background:none;border:none;color:#aab8c0;cursor:pointer;font-size:16px;padding:4px;">✕</button>
+      </div>
+      <input type="text" value="${r.prevention||''}" onchange="ppRisks[${i}].prevention=this.value" placeholder="Mesures de prévention..." style="width:100%;padding:7px 10px;border:1px solid #e3e8ec;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;margin-top:4px;">
+    </div>`).join('')||'<div style="font-size:12px;color:#aab8c0;padding:8px 0;">Cliquez sur "Générer avec l\'IA" ou ajoutez manuellement.</div>';
+}
+
+// ── PPSPS CRUD ─────────────────────────────────────────────────────────────────
+function genNumPPSPS(){const y=new Date().getFullYear();const n=((DB.ppsps||[]).filter(p=>p.num?.includes(y)).length+1).toString().padStart(3,'0');return`PPSPS-${y}-${n}`;}
+function openNewPPSPS(){
+  editingPPId=null;ppRisks=[];
+  $('ppsps-form-title').textContent='Nouveau PPSPS';
+  $('pp-date-debut').value=new Date().toISOString().split('T')[0];
+  $('pp-date-sig').value=new Date().toISOString().split('T')[0];
+  const d=new Date();d.setDate(d.getDate()-30);
+  $('pp-date-remise').value=d.toISOString().split('T')[0];
+  $('pp-entreprise').value='';
+  ['pp-responsable','pp-chantier','pp-adresse','pp-moa','pp-description','pp-csps','pp-csps-email','pp-qualif','pp-materiel','pp-horaires','pp-sst','pp-hopital','pp-materiel-secours','pp-evacuation','pp-coactivite','pp-coordination','pp-lieu'].forEach(id=>{if($(id))$(id).value='';});
+  $('pp-effectif').value='';$('pp-duree').value='';$('pp-nb-sst').value='1';
+  clearSig('pp-sig');renderRisks();
+  showView('view-ppsps-form');
+}
+function collectPPSPS(){
+  return{
+    categorie:$('pp-categorie').value,dateRemise:$('pp-date-remise').value,dateDebut:$('pp-date-debut').value,
+    csps:$('pp-csps').value.trim(),cspsEmail:$('pp-csps-email').value.trim(),
+    entrepriseId:$('pp-entreprise').value,entrepriseNom:(DB.entreprises||[]).find(e=>e.id===$('pp-entreprise').value)?.nom||'',
+    responsable:$('pp-responsable').value.trim(),effectif:$('pp-effectif').value,duree:$('pp-duree').value.trim(),
+    chantier:$('pp-chantier').value.trim(),adresse:$('pp-adresse').value.trim(),moa:$('pp-moa').value.trim(),
+    typeTravaux:$('pp-type-travaux').value,description:$('pp-description').value.trim(),
+    qualif:$('pp-qualif').value.trim(),materiel:$('pp-materiel').value.trim(),horaires:$('pp-horaires').value.trim(),
+    risques:ppRisks.map(r=>({...r})),
+    epi:['epi-1','epi-2','epi-3','epi-4','epi-5','epi-6','epi-7','epi-8'].filter(id=>$(id)?.checked).map(id=>$(id).nextElementSibling.textContent),
+    sst:$('pp-sst').value.trim(),nbSst:$('pp-nb-sst').value,hopital:$('pp-hopital').value.trim(),
+    materielSecours:$('pp-materiel-secours').value.trim(),evacuation:$('pp-evacuation').value.trim(),
+    coactivite:$('pp-coactivite').value.trim(),coordination:$('pp-coordination').value.trim(),
+    lieu:$('pp-lieu').value.trim(),dateSig:$('pp-date-sig').value,sig:getSig('pp-sig'),
+  };
+}
+function savePPSPS(){
+  const data=collectPPSPS();
+  if(!data.chantier){toast('Nom du chantier requis');return;}
+  if(!DB.ppsps)DB.ppsps=[];
+  if(editingPPId){const idx=DB.ppsps.findIndex(p=>p.id===editingPPId);if(idx>=0)Object.assign(DB.ppsps[idx],data);}
+  else{const id='PP'+Date.now();editingPPId=id;DB.ppsps.push({id,num:genNumPPSPS(),...data,statut:'brouillon',createdAt:new Date().toISOString()});}
+  saveDB();updateBadges();toast('✓ PPSPS sauvegardé');
+}
+async function sendPPSPS(){
+  const data=collectPPSPS();
+  if(!data.cspsEmail){toast('Email du coordonnateur SPS requis');return;}
+  savePPSPS();
+  try{
+    await spGetToken();
+    const base='https://graph.microsoft.com/v1.0';
+    const ent=(DB.entreprises||[]).find(e=>e.id===data.entrepriseId)||{};
+    await graphCall('POST',`${base}/me/sendMail`,{message:{
+      subject:`PPSPS — ${data.chantier} — ${ent.nom||''}`,
+      body:{contentType:'HTML',content:`<p>Bonjour,</p><p>Veuillez trouver ci-joint le PPSPS pour le chantier <strong>${data.chantier}</strong> (${data.adresse}).</p><p>Entreprise : ${ent.nom||'—'} · Responsable : ${data.responsable}</p><p>Début des travaux prévu : ${fmtD(data.dateDebut)}</p><p>Cordialement,<br>${data.responsable}</p>`},
+      toRecipients:[{emailAddress:{address:data.cspsEmail,name:data.csps||'Coordonnateur SPS'}}]
+    }});
+    toast('✓ PPSPS envoyé au coordonnateur SPS');
+  }catch(e){toast('Erreur envoi : '+e.message);}
+}
+async function genererPPSPS(){
+  const data=collectPPSPS();
+  if(!data.chantier){toast('Nom du chantier requis');return;}
+  savePPSPS();
+  const ppsps=(DB.ppsps||[]).find(p=>p.id===editingPPId);
+  const html=buildPPSPSHTML({...ppsps,...data});
+  await archiveDocSP('ppsps',ppsps?.num||'PPSPS',ppsps?.entrepriseNom||'',html,ppsps?.num||'');
+  toast('✓ PPSPS généré',4000);
+  setTimeout(()=>{showView('view-ppsps-list');renderPPSPSList();},1500);
+}
+function renderPPSPSList(){
+  const list=DB.ppsps||[];
+  $('ppsps-list').innerHTML=list.length?[...list].reverse().map(p=>`<div class="list-item" onclick="editPPSPS('${p.id}')"><div style="width:8px;height:8px;border-radius:50%;background:#e04444;flex-shrink:0;"></div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.chantier||'—'} · ${p.entrepriseNom||'—'}</div><div style="font-size:11px;color:#7a8d97;margin-top:2px;">${p.num||'—'} · ${fmtD(p.dateDebut)} · Catégorie ${p.categorie||'?'}</div></div><div style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:#fff5f5;color:#991b1b;">${p.statut==='genere'?'Généré':'Brouillon'}</div></div>`).join(''):'<div style="text-align:center;padding:28px;font-size:13px;color:#7a8d97;">Aucun PPSPS</div>';
+}
+function editPPSPS(id){
+  const p=(DB.ppsps||[]).find(x=>x.id===id);if(!p)return;
+  editingPPId=id;ppRisks=[...(p.risques||[])];
+  $('ppsps-form-title').textContent=p.num||'PPSPS';
+  ['pp-categorie','pp-date-remise','pp-date-debut','pp-entreprise','pp-responsable','pp-chantier','pp-adresse','pp-moa','pp-description','pp-csps','pp-csps-email','pp-qualif','pp-materiel','pp-horaires','pp-sst','pp-hopital','pp-materiel-secours','pp-evacuation','pp-coactivite','pp-coordination','pp-lieu','pp-date-sig'].forEach(fId=>{const key=fId.replace('pp-','').replace(/-([a-z])/g,(_,c)=>c.toUpperCase());if($(fId)&&p[key]!==undefined)$(fId).value=p[key]||'';});
+  $('pp-effectif').value=p.effectif||'';$('pp-nb-sst').value=p.nbSst||1;
+  clearSig('pp-sig');renderRisks();
+  showView('view-ppsps-form');
+}
+
+// ── ECHAFAUDAGE CRUD ───────────────────────────────────────────────────────────
+function genNumEchaf(){const y=new Date().getFullYear();const n=((DB.pvEchafaudages||[]).filter(p=>p.num?.includes(y)).length+1).toString().padStart(3,'0');return`PVE-${y}-${n}`;}
+function openNewEchaf(){
+  editingEcId=null;
+  $('echaf-form-title').textContent='Nouveau PV réception';
+  $('ec-date').value=new Date().toISOString().split('T')[0];
+  ['ec-chantier','ec-adresse','ec-marque','ec-monteur-ent','ec-monteur-nom','ec-note-calcul','ec-observations'].forEach(id=>{if($(id))$(id).value='';});
+  ['ec-hauteur','ec-longueur','ec-charge'].forEach(id=>{if($(id))$(id).value='';});
+  $('ec-entreprise').value='';$('ec-conforme').checked=false;
+  Array.from({length:19},(_,i)=>i+1).forEach(n=>{const el=$(`cl-${n}`);if(el)el.checked=false;});
+  clearSig('ec-sig-monteur');clearSig('ec-sig-resp');
+  showView('view-echaf-form');
+}
+function collectEchaf(){
+  const entId=$('ec-entreprise').value;
+  const checks={};Array.from({length:19},(_,i)=>i+1).forEach(n=>{const el=$(`cl-${n}`);if(el)checks[`cl${n}`]=el.checked;});
+  return{
+    chantier:$('ec-chantier').value.trim(),adresse:$('ec-adresse').value.trim(),
+    entrepriseId:entId,entrepriseNom:(DB.entreprises||[]).find(e=>e.id===entId)?.nom||'',
+    dateReception:$('ec-date').value,type:$('ec-type').value,marque:$('ec-marque').value.trim(),
+    hauteur:$('ec-hauteur').value,longueur:$('ec-longueur').value,charge:$('ec-charge').value,
+    monteurEnt:$('ec-monteur-ent').value.trim(),monteurNom:$('ec-monteur-nom').value.trim(),
+    noteCalcul:$('ec-note-calcul').value.trim(),observations:$('ec-observations').value.trim(),
+    conforme:$('ec-conforme').checked,checks,
+    sigMonteur:getSig('ec-sig-monteur'),sigResp:getSig('ec-sig-resp'),
+  };
+}
+function saveEchaf(){
+  const data=collectEchaf();
+  if(!data.chantier){toast('Nom du chantier requis');return;}
+  if(!DB.pvEchafaudages)DB.pvEchafaudages=[];
+  if(editingEcId){const idx=DB.pvEchafaudages.findIndex(p=>p.id===editingEcId);if(idx>=0)Object.assign(DB.pvEchafaudages[idx],data);}
+  else{const id='EC'+Date.now();editingEcId=id;DB.pvEchafaudages.push({id,num:genNumEchaf(),...data,statut:'brouillon',createdAt:new Date().toISOString()});}
+  saveDB();updateBadges();toast('✓ PV échafaudage sauvegardé');
+}
+async function genererEchaf(){
+  const data=collectEchaf();
+  if(!data.chantier){toast('Chantier requis');return;}
+  saveEchaf();
+  const ec=(DB.pvEchafaudages||[]).find(p=>p.id===editingEcId);
+  const html=buildEchafHTML({...ec,...data});
+  await archiveDocSP('echafaudages',ec?.num||'PVE',ec?.entrepriseNom||'',html,ec?.num||'');
+  toast('✓ PV échafaudage généré',4000);
+  setTimeout(()=>{showView('view-echaf-list');renderEchafList();},1500);
+}
+function renderEchafList(){
+  const list=DB.pvEchafaudages||[];
+  $('echaf-list').innerHTML=list.length?[...list].reverse().map(p=>`<div class="list-item" onclick="editEchaf('${p.id}')"><div style="width:8px;height:8px;border-radius:50%;background:#c47d0a;flex-shrink:0;"></div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.chantier||'—'}</div><div style="font-size:11px;color:#7a8d97;margin-top:2px;">${p.num||'—'} · ${fmtD(p.dateReception)} · ${p.type||'—'}</div></div><div style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${p.conforme?'#eaf7f1':'#fff5f5'};color:${p.conforme?'#085041':'#991b1b'};">${p.conforme?'Conforme':'Non conforme'}</div></div>`).join(''):'<div style="text-align:center;padding:28px;font-size:13px;color:#7a8d97;">Aucun PV</div>';
+}
+function editEchaf(id){
+  const p=(DB.pvEchafaudages||[]).find(x=>x.id===id);if(!p)return;
+  editingEcId=id;
+  $('echaf-form-title').textContent=p.num||'PV';
+  ['ec-chantier','ec-adresse','ec-marque','ec-monteur-ent','ec-monteur-nom','ec-note-calcul','ec-observations'].forEach(fId=>{if($(fId))$(fId).value=p[fId.replace('ec-','').replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]||'';});
+  $('ec-date').value=p.dateReception||'';$('ec-entreprise').value=p.entrepriseId||'';
+  $('ec-hauteur').value=p.hauteur||'';$('ec-longueur').value=p.longueur||'';$('ec-charge').value=p.charge||'';
+  $('ec-conforme').checked=!!p.conforme;
+  if(p.checks)Object.entries(p.checks).forEach(([k,v])=>{const el=$(k.replace('cl','cl-'));if(el)el.checked=v;});
+  clearSig('ec-sig-monteur');clearSig('ec-sig-resp');
+  showView('view-echaf-form');
+}
+
+// ── CONVENTION PRÊT CRUD ───────────────────────────────────────────────────────
+function genNumPret(){const y=new Date().getFullYear();const n=((DB.conventionsPret||[]).filter(p=>p.num?.includes(y)).length+1).toString().padStart(3,'0');return`CPE-${y}-${n}`;}
+function openNewPret(){
+  editingPrId=null;
+  $('pret-form-title').textContent='Nouvelle convention';
+  $('pr-date-sig').value=new Date().toISOString().split('T')[0];
+  $('pr-date-debut').value=new Date().toISOString().split('T')[0];
+  ['pr-emprunteur','pr-emprunteur-rep','pr-emprunteur-adresse','pr-chantier','pr-lieu'].forEach(id=>{if($(id))$(id).value='';});
+  $('pr-preteur').value='';$('pr-preteur-rep').value='';$('pr-valeur').value='';
+  $('pr-materiel').value='';$('pr-date-fin').value='';
+  $('pr-etat-obs').value='';
+  $('pr-obligations').value='L\'emprunteur s\'engage à :\n• Monter et démonter l\'échafaudage par du personnel compétent\n• N\'utiliser le matériel que pour l\'usage prévu\n• Maintenir le matériel en bon état\n• Souscrire une assurance couvrant le matériel\n• Restituer complet et propre à la date convenue\n• Assumer les frais de réparation en cas de dégradation';
+  $('pr-resp-preteur').value='Le prêteur met à disposition le matériel en l\'état au jour de la remise. Il ne saurait être tenu responsable des accidents survenus lors de l\'utilisation par l\'emprunteur.';
+  clearSig('pr-sig-preteur');clearSig('pr-sig-emprunteur');
+  showView('view-pret-form');
+}
+function collectPret(){
+  const preteurId=$('pr-preteur').value;
+  return{
+    preteurId,preteurNom:(DB.entreprises||[]).find(e=>e.id===preteurId)?.nom||'',
+    preteurRep:$('pr-preteur-rep').value.trim(),
+    emprunteur:$('pr-emprunteur').value.trim(),emprunteurRep:$('pr-emprunteur-rep').value.trim(),
+    emprunteurAdresse:$('pr-emprunteur-adresse').value.trim(),
+    materiel:$('pr-materiel').value.trim(),etat:$('pr-etat').value,etatObs:$('pr-etat-obs').value.trim(),
+    valeur:$('pr-valeur').value,chantier:$('pr-chantier').value.trim(),
+    dateDebut:$('pr-date-debut').value,dateFin:$('pr-date-fin').value,
+    conditions:$('pr-conditions').value,obligations:$('pr-obligations').value.trim(),
+    respPreteur:$('pr-resp-preteur').value.trim(),
+    lieu:$('pr-lieu').value.trim(),dateSig:$('pr-date-sig').value,
+    sigPreteur:getSig('pr-sig-preteur'),sigEmprunteur:getSig('pr-sig-emprunteur'),
+  };
+}
+function savePret(){
+  const data=collectPret();
+  if(!data.emprunteur){toast('Emprunteur requis');return;}
+  if(!DB.conventionsPret)DB.conventionsPret=[];
+  if(editingPrId){const idx=DB.conventionsPret.findIndex(p=>p.id===editingPrId);if(idx>=0)Object.assign(DB.conventionsPret[idx],data);}
+  else{const id='PR'+Date.now();editingPrId=id;DB.conventionsPret.push({id,num:genNumPret(),...data,statut:'signe',createdAt:new Date().toISOString()});}
+  saveDB();updateBadges();toast('✓ Convention sauvegardée');
+}
+async function genererPret(){
+  const data=collectPret();
+  if(!data.emprunteur){toast('Emprunteur requis');return;}
+  savePret();
+  const pret=(DB.conventionsPret||[]).find(p=>p.id===editingPrId);
+  const html=buildPretHTML({...pret,...data});
+  await archiveDocSP('conventions-pret',pret?.num||'CPE',pret?.preteurNom||'',html,pret?.num||'');
+  toast('✓ Convention générée',4000);
+  setTimeout(()=>{showView('view-pret-list');renderPretList();},1500);
+}
+function renderPretList(){
+  const list=DB.conventionsPret||[];
+  $('pret-list').innerHTML=list.length?[...list].reverse().map(p=>`<div class="list-item" onclick="editPret('${p.id}')"><div style="width:8px;height:8px;border-radius:50%;background:#2abbda;flex-shrink:0;"></div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.preteurNom||'—'} → ${p.emprunteur||'—'}</div><div style="font-size:11px;color:#7a8d97;margin-top:2px;">${p.num||'—'} · ${fmtD(p.dateDebut)}${p.dateFin?' → '+fmtD(p.dateFin):''}</div></div></div>`).join(''):'<div style="text-align:center;padding:28px;font-size:13px;color:#7a8d97;">Aucune convention</div>';
+}
+function editPret(id){
+  const p=(DB.conventionsPret||[]).find(x=>x.id===id);if(!p)return;
+  editingPrId=id;$('pret-form-title').textContent=p.num||'Convention';
+  $('pr-preteur').value=p.preteurId||'';$('pr-preteur-rep').value=p.preteurRep||'';
+  $('pr-emprunteur').value=p.emprunteur||'';$('pr-emprunteur-rep').value=p.emprunteurRep||'';
+  $('pr-emprunteur-adresse').value=p.emprunteurAdresse||'';
+  $('pr-materiel').value=p.materiel||'';$('pr-etat').value=p.etat||'Bon état général';
+  $('pr-etat-obs').value=p.etatObs||'';$('pr-valeur').value=p.valeur||'';
+  $('pr-chantier').value=p.chantier||'';$('pr-date-debut').value=p.dateDebut||'';
+  $('pr-date-fin').value=p.dateFin||'';$('pr-conditions').value=p.conditions||'Prêt à titre gratuit';
+  $('pr-obligations').value=p.obligations||'';$('pr-resp-preteur').value=p.respPreteur||'';
+  $('pr-lieu').value=p.lieu||'';$('pr-date-sig').value=p.dateSig||'';
+  clearSig('pr-sig-preteur');clearSig('pr-sig-emprunteur');
+  showView('view-pret-form');
+}
+
+// ── ARCHIVAGE SP ───────────────────────────────────────────────────────────────
+async function archiveDocSP(type,num,entNom,html,docNum){
+  if(!spSiteId)return;
+  await spGetToken();
+  const base='https://graph.microsoft.com/v1.0';
+  const nom=(entNom||'HEXA').replace(/[^a-zA-Z0-9\-_]/gi,'_');
+  const folder=`securite/${nom}/${type}/${num}`;
+  try{await fetch(`${base}/sites/${spSiteId}/drive/root:/${folder}/doc.html:/content`,{method:'PUT',headers:{'Authorization':'Bearer '+spToken,'Content-Type':'text/html'},body:html});toast('✓ Archivé sur SharePoint');}catch(e){console.warn(e);}
+}
+
+// ── GÉNÉRATION HTML PPSPS ──────────────────────────────────────────────────────
+function buildPPSPSHTML(d){
+  const ent=(DB.entreprises||[]).find(e=>e.id===d.entrepriseId)||{};
+  const couleur=ent.couleur||'#e04444';
+  const graviteStyle={critique:'background:#fff5f5;border-left:3px solid #e04444;color:#991b1b',grave:'background:#fff7e6;border-left:3px solid #c47d0a;color:#7a4a10',moyen:'background:#fffdf0;border-left:3px solid #c4a100;color:#6b5200'};
+  const risquesHTML=(d.risques||[]).map(r=>`<div style="padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:8px;${graviteStyle[r.gravite]||graviteStyle.moyen}"><div style="font-size:12px;font-weight:700;margin-bottom:4px;">${r.phase} — ${r.risque}</div><div style="font-size:11px;line-height:1.6;">🛡️ ${r.prevention}</div></div>`).join('');
+  const epiHTML=(d.epi||[]).map(e=>`<div style="display:inline-block;padding:3px 10px;background:#f0eeff;color:#4a3ea8;border-radius:20px;font-size:11px;font-weight:600;margin:3px 4px 3px 0;">✓ ${e}</div>`).join('');
+  return`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PPSPS — ${d.chantier}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'DM Sans',sans-serif;background:#f5f6f8;-webkit-font-smoothing:antialiased;}.page{max-width:800px;margin:0 auto;padding:24px 16px 60px;}.card{background:#fff;border-radius:12px;border:1px solid #e3e8ec;margin-bottom:14px;overflow:hidden;}.sh{padding:10px 18px;background:#f8fafc;border-bottom:1px solid #e3e8ec;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7a8d97;display:flex;align-items:center;gap:8px;}.sn{width:24px;height:24px;border-radius:6px;background:#12161c;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;flex-shrink:0;}.sb{padding:14px 18px;}.r2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}.lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#aab8c0;margin-bottom:3px;}.val{font-size:13px;color:#12161c;font-weight:500;line-height:1.5;}@media print{body{background:#fff;}.page{max-width:none;padding:10px;}.no-print{display:none;}}</style>
+</head><body><div class="page">
+<div class="no-print" style="text-align:right;margin-bottom:14px;"><button onclick="window.print()" style="background:#12161c;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;">🖨 Imprimer / PDF</button></div>
+<div class="card">
+  <div style="background:#12161c;padding:0;display:grid;grid-template-columns:5px 1fr;">
+    <div style="background:${couleur};"></div>
+    <div style="padding:22px 24px;">
+      <div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:6px;">Document réglementaire · Art. R4532-56 à R4532-74 Code du travail</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:24px;font-weight:800;color:#fff;letter-spacing:-1px;margin-bottom:14px;">Plan Particulier de Sécurité<br>et de <span style="color:${couleur};">Protection de la Santé</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden;">
+        <div style="background:#1a2030;padding:10px 14px;"><div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Chantier</div><div style="font-size:14px;font-weight:600;color:#fff;">${d.chantier}</div><div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">${d.adresse}</div></div>
+        <div style="background:#1a2030;padding:10px 14px;"><div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Entreprise</div><div style="font-size:14px;font-weight:600;color:#fff;">${ent.nom||d.entrepriseNom||'—'}</div><div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">${d.responsable||'—'}</div></div>
+        <div style="background:#1a2030;padding:10px 14px;border-top:1px solid rgba(255,255,255,.06);"><div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Début travaux</div><div style="font-size:14px;font-weight:600;color:#fff;">${fmtD(d.dateDebut)}</div></div>
+        <div style="background:#1a2030;padding:10px 14px;border-top:1px solid rgba(255,255,255,.06);"><div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Catégorie · N° réf.</div><div style="font-size:14px;font-weight:600;color:#fff;">Cat. ${d.categorie} · ${d.num||'—'}</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card"><div class="sh"><div class="sn">1</div>Identification et description des travaux</div><div class="sb"><div class="r2"><div><div class="lbl">Maître d'ouvrage</div><div class="val">${d.moa||'—'}</div></div><div><div class="lbl">Effectif prévu</div><div class="val">${d.effectif||'—'} personnes · ${d.duree||'—'}</div></div></div><div style="margin-top:10px;"><div class="lbl">Nature des travaux</div><div class="val">${d.typeTravaux}</div></div><div style="margin-top:8px;background:#f8fafc;border-left:3px solid #12161c;border-radius:0 8px 8px 0;padding:10px 14px;font-size:13px;color:#3d4a56;line-height:1.6;">${d.description||'—'}</div><div style="margin-top:10px;" class="r2"><div><div class="lbl">Qualifications / habilitations</div><div class="val" style="font-size:12px;">${d.qualif||'—'}</div></div><div><div class="lbl">Matériel principal</div><div class="val" style="font-size:12px;">${d.materiel||'—'}</div></div></div><div style="margin-top:8px;"><div class="lbl">Horaires</div><div class="val" style="font-size:12px;">${d.horaires||'—'}</div></div></div></div>
+<div class="card"><div class="sh"><div class="sn">2</div>Analyse des risques et mesures de prévention</div><div class="sb">${risquesHTML||'<div style="font-size:12px;color:#aab8c0;">Aucun risque renseigné</div>'}</div></div>
+<div class="card"><div class="sh"><div class="sn">3</div>Équipements de Protection Individuelle (EPI)</div><div class="sb"><div>${epiHTML||'—'}</div></div></div>
+<div class="card" style="border-color:#fca5a5;"><div class="sh" style="background:#fff5f5;"><div class="sn" style="background:#e04444;">🚨</div>Organisation des secours</div><div class="sb"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"><div style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#e04444;font-family:'Space Grotesk',sans-serif;">15</div><div style="font-size:10px;color:#991b1b;font-weight:600;">SAMU</div></div><div style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#e04444;font-family:'Space Grotesk',sans-serif;">18</div><div style="font-size:10px;color:#991b1b;font-weight:600;">Pompiers</div></div><div style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#e04444;font-family:'Space Grotesk',sans-serif;">112</div><div style="font-size:10px;color:#991b1b;font-weight:600;">Urgences EU</div></div></div><div class="r2"><div><div class="lbl">SST présent</div><div class="val">${d.sst||'—'} (${d.nbSst||1} SST)</div></div><div><div class="lbl">Hôpital le plus proche</div><div class="val">${d.hopital||'—'}</div></div></div><div style="margin-top:8px;"><div class="lbl">Matériel de secours</div><div class="val" style="font-size:12px;">${d.materielSecours||'—'}</div></div><div style="margin-top:8px;background:#fff5f5;border-radius:8px;padding:10px 14px;font-size:12px;color:#991b1b;line-height:1.6;">${d.evacuation||'—'}</div></div></div>
+${d.coactivite?`<div class="card"><div class="sh"><div class="sn">5</div>Coactivité</div><div class="sb"><div class="lbl">Autres entreprises présentes</div><div class="val" style="margin-bottom:8px;">${d.coactivite}</div><div class="lbl">Mesures de coordination</div><div class="val">${d.coordination||'—'}</div></div></div>`:''}
+<div class="card"><div class="sh"><div class="sn">6</div>Signature et validation</div><div class="sb"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;"><div><div class="lbl">Fait à</div><div class="val">${d.lieu||'—'}, le ${fmtD(d.dateSig)}</div></div><div><div class="lbl">Coordonnateur SPS</div><div class="val">${d.csps||'—'}</div></div></div><div style="max-width:400px;"><div class="lbl" style="margin-bottom:6px;">${d.responsable||'—'} · ${ent.nom||'—'}</div><div style="border:1px solid #e3e8ec;border-radius:8px;min-height:80px;overflow:hidden;">${d.sig?`<img src="${d.sig}" style="width:100%;height:80px;object-fit:contain;">`:'<div style="height:80px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#aab8c0;">Non signé</div>'}</div></div><div style="margin-top:12px;font-size:10px;color:#aab8c0;line-height:1.7;">Ce document a été établi conformément aux articles R.4532-56 à R.4532-74 du Code du travail. Il doit être remis au coordonnateur SPS au moins 30 jours avant le début des travaux et conservé pendant 5 ans. Réf. ${d.num||'—'}</div></div></div>
+</div></body></html>`;
+}
+
+// ── GÉNÉRATION HTML ÉCHAFAUDAGE ────────────────────────────────────────────────
+function buildEchafHTML(d){
+  const ent=(DB.entreprises||[]).find(e=>e.id===d.entrepriseId)||{};
+  const checks=[
+    {id:'cl1',txt:'Ancrages conformes'},{id:'cl2',txt:'Vérins calés'},{id:'cl3',txt:'Contreventements'},
+    {id:'cl4',txt:'Distance au mur ≤ 30cm'},{id:'cl5',txt:'Planchers ≥ 60cm'},{id:'cl6',txt:'Absence de vide'},
+    {id:'cl7',txt:'Planchers verrouillés'},{id:'cl8',txt:'Plinthe 15cm min'},{id:'cl9',txt:'Lisse à 1m'},
+    {id:'cl10',txt:'Sous-lisse à 45-50cm'},{id:'cl11',txt:'GC sur tous côtés'},{id:'cl12',txt:'Trappe d\'accès'},
+    {id:'cl13',txt:'Accès sécurisé'},{id:'cl14',txt:'Signalisation'},{id:'cl15',txt:'Secours non bloqué'},
+    {id:'cl16',txt:'Charge affichée'},{id:'cl17',txt:'Notice disponible'},{id:'cl18',txt:'Aucun élément endommagé'},{id:'cl19',txt:'Conforme plan'}
+  ];
+  const checkHTML=checks.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f5f6f8;"><div style="width:20px;height:20px;border-radius:4px;border:2px solid ${d.checks?.[c.id]?'#2a9d6f':'#e3e8ec'};background:${d.checks?.[c.id]?'#2a9d6f':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">${d.checks?.[c.id]?'<span style="color:#fff;font-size:12px;font-weight:700;">✓</span>':''}</div><div style="font-size:13px;color:${d.checks?.[c.id]?'#12161c':'#aab8c0'};">${c.txt}</div></div>`).join('');
+  return`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PV Réception Échafaudage — ${d.chantier}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'DM Sans',sans-serif;background:#f5f6f8;-webkit-font-smoothing:antialiased;}.page{max-width:720px;margin:0 auto;padding:24px 16px 60px;}.card{background:#fff;border-radius:12px;border:1px solid #e3e8ec;margin-bottom:14px;overflow:hidden;}.sh{padding:10px 18px;background:#f8fafc;border-bottom:1px solid #e3e8ec;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7a8d97;}.sb{padding:14px 18px;}.r2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}.lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#aab8c0;margin-bottom:3px;}.val{font-size:13px;font-weight:500;color:#12161c;}@media print{body{background:#fff;}.page{max-width:none;padding:10px;}.no-print{display:none;}}</style>
+</head><body><div class="page">
+<div class="no-print" style="text-align:right;margin-bottom:14px;"><button onclick="window.print()" style="background:#12161c;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;">🖨 Imprimer / PDF</button></div>
+<div class="card"><div style="background:#12161c;padding:20px 24px;display:grid;grid-template-columns:4px 1fr;"><div style="background:#c47d0a;"></div><div style="padding-left:16px;"><div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.3);margin-bottom:4px;">NF HD 1000 / EN 12811</div><div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:12px;">PV de réception<br><span style="color:#f5c542;">d'échafaudage</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden;"><div style="background:#1a2030;padding:10px 14px;"><div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;margin-bottom:2px;">Chantier</div><div style="font-size:13px;font-weight:600;color:#fff;">${d.chantier}</div><div style="font-size:11px;color:rgba(255,255,255,.4);">${d.adresse}</div></div><div style="background:#1a2030;padding:10px 14px;"><div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;margin-bottom:2px;">Date</div><div style="font-size:13px;font-weight:600;color:#fff;">${fmtD(d.dateReception)}</div><div style="font-size:11px;color:rgba(255,255,255,.4);">Réf. ${d.num||'—'}</div></div></div></div></div></div>
+<div class="card"><div class="sh">Identification de l'échafaudage</div><div class="sb"><div class="r2"><div><div class="lbl">Type</div><div class="val">${d.type||'—'}</div></div><div><div class="lbl">Marque</div><div class="val">${d.marque||'—'}</div></div><div><div class="lbl">Hauteur</div><div class="val">${d.hauteur||'—'} m</div></div><div><div class="lbl">Longueur</div><div class="val">${d.longueur||'—'} m</div></div><div><div class="lbl">Charge admissible</div><div class="val">${d.charge||'—'} kg/m²</div></div><div><div class="lbl">Note de calcul</div><div class="val">${d.noteCalcul||'—'}</div></div></div><div style="margin-top:10px;" class="r2"><div><div class="lbl">Entreprise monteuse</div><div class="val">${d.monteurEnt||'—'}</div></div><div><div class="lbl">Monteur responsable</div><div class="val">${d.monteurNom||'—'}</div></div></div></div></div>
+<div class="card" style="border-color:#f5d98a;"><div class="sh" style="background:#fffdf0;">Checklist de réception — NF HD 1000 / EN 12811</div><div class="sb">${checkHTML}</div><div style="padding:10px 18px;border-top:1px solid #e3e8ec;background:${d.conforme?'#eaf7f1':'#fff5f5'};"><div style="font-size:13px;font-weight:600;color:${d.conforme?'#1a5740':'#991b1b'};">${d.conforme?'✅ Échafaudage déclaré CONFORME — peut être utilisé en sécurité':'❌ Échafaudage NON CONFORME — utilisation interdite jusqu\'à levée des réserves'}</div>${d.observations?`<div style="margin-top:6px;font-size:12px;color:#7a8d97;">${d.observations}</div>`:''}</div></div>
+<div class="card"><div class="sh">Signatures</div><div style="display:grid;grid-template-columns:1fr 1fr;"><div style="padding:16px 18px;border-right:1px solid #f0f4f7;"><div style="font-size:9px;color:#aab8c0;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Monteur responsable</div><div style="font-size:12px;font-weight:500;margin-bottom:8px;">${d.monteurNom||'—'} · ${d.monteurEnt||'—'}</div><div style="border:1px solid #e3e8ec;border-radius:8px;min-height:80px;overflow:hidden;">${d.sigMonteur?`<img src="${d.sigMonteur}" style="width:100%;height:80px;object-fit:contain;">`:'<div style="height:80px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#aab8c0;">—</div>'}</div></div><div style="padding:16px 18px;"><div style="font-size:9px;color:#aab8c0;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Responsable de chantier</div><div style="font-size:12px;font-weight:500;margin-bottom:8px;">${ent.nom||'—'}</div><div style="border:1px solid #e3e8ec;border-radius:8px;min-height:80px;overflow:hidden;">${d.sigResp?`<img src="${d.sigResp}" style="width:100%;height:80px;object-fit:contain;">`:'<div style="height:80px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#aab8c0;">—</div>'}</div></div></div></div>
+</div></body></html>`;
+}
+
+// ── GÉNÉRATION HTML CONVENTION PRÊT ───────────────────────────────────────────
+function buildPretHTML(d){
+  const ent=(DB.entreprises||[]).find(e=>e.id===d.preteurId)||{};
+  return`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Convention de prêt — ${d.num||''}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'DM Sans',sans-serif;background:#f5f6f8;-webkit-font-smoothing:antialiased;}.page{max-width:720px;margin:0 auto;padding:24px 16px 60px;}.card{background:#fff;border-radius:12px;border:1px solid #e3e8ec;margin-bottom:14px;overflow:hidden;}.sh{padding:10px 18px;background:#f8fafc;border-bottom:1px solid #e3e8ec;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7a8d97;}.sb{padding:16px 18px;}.r2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}.lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#aab8c0;margin-bottom:3px;}.val{font-size:13px;font-weight:500;color:#12161c;line-height:1.5;}@media print{body{background:#fff;}.page{max-width:none;padding:10px;}.no-print{display:none;}}</style>
+</head><body><div class="page">
+<div class="no-print" style="text-align:right;margin-bottom:14px;"><button onclick="window.print()" style="background:#12161c;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;">🖨 Imprimer / PDF</button></div>
+<div class="card"><div style="background:#12161c;padding:20px 24px;display:grid;grid-template-columns:4px 1fr;"><div style="background:#2abbda;"></div><div style="padding-left:16px;"><div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,.3);margin-bottom:4px;">Convention · Réf. ${d.num||'—'}</div><div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:12px;">Convention de <span style="color:#2abbda;">prêt</span><br>d'échafaudage</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden;"><div style="background:#1a2030;padding:10px 14px;"><div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;margin-bottom:2px;">Prêteur</div><div style="font-size:13px;font-weight:600;color:#fff;">${ent.nom||d.preteurNom||'—'}</div><div style="font-size:11px;color:rgba(255,255,255,.4);">${d.preteurRep||'—'}</div></div><div style="background:#1a2030;padding:10px 14px;"><div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;margin-bottom:2px;">Emprunteur</div><div style="font-size:13px;font-weight:600;color:#fff;">${d.emprunteur||'—'}</div><div style="font-size:11px;color:rgba(255,255,255,.4);">${d.emprunteurRep||'—'}</div></div></div></div></div></div>
+<div class="card"><div class="sh">Matériel prêté</div><div class="sb"><div style="background:#f8fafc;border-left:3px solid #2abbda;border-radius:0 8px 8px 0;padding:12px 14px;font-size:13px;color:#3d4a56;line-height:1.7;margin-bottom:10px;">${d.materiel||'—'}</div><div class="r2"><div><div class="lbl">État à la remise</div><div class="val">${d.etat||'—'}</div></div><div><div class="lbl">Valeur estimée</div><div class="val">${d.valeur?d.valeur+' €':'—'}</div></div></div>${d.etatObs?`<div style="margin-top:8px;"><div class="lbl">Observations</div><div class="val" style="font-size:12px;">${d.etatObs}</div></div>`:''}</div></div>
+<div class="card"><div class="sh">Conditions du prêt</div><div class="sb"><div class="r2"><div><div class="lbl">Chantier de destination</div><div class="val">${d.chantier||'—'}</div></div><div><div class="lbl">Conditions financières</div><div class="val">${d.conditions||'—'}</div></div><div><div class="lbl">Mise à disposition le</div><div class="val">${fmtD(d.dateDebut)}</div></div><div><div class="lbl">Restitution prévue le</div><div class="val">${fmtD(d.dateFin)}</div></div></div></div></div>
+<div class="card" style="border-color:#b3eaf4;"><div class="sh" style="background:#eaf9fc;">Obligations de l'emprunteur</div><div class="sb"><div style="white-space:pre-line;font-size:13px;color:#3d4a56;line-height:1.7;">${d.obligations||'—'}</div></div></div>
+<div class="card"><div class="sh">Responsabilité du prêteur</div><div class="sb"><div style="font-size:12px;color:#7a8d97;line-height:1.7;font-style:italic;">${d.respPreteur||'—'}</div></div></div>
+<div class="card"><div class="sh">Signatures</div><div style="display:grid;grid-template-columns:1fr 1fr;"><div style="padding:16px 18px;border-right:1px solid #f0f4f7;"><div style="font-size:9px;color:#aab8c0;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Le prêteur</div><div style="font-size:12px;font-weight:500;margin-bottom:4px;">${ent.nom||d.preteurNom||'—'}</div><div style="font-size:11px;color:#7a8d97;margin-bottom:8px;">${d.preteurRep||'—'}</div><div style="border:1px solid #e3e8ec;border-radius:8px;min-height:80px;overflow:hidden;">${d.sigPreteur?`<img src="${d.sigPreteur}" style="width:100%;height:80px;object-fit:contain;">`:''}</div></div><div style="padding:16px 18px;"><div style="font-size:9px;color:#aab8c0;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">L'emprunteur</div><div style="font-size:12px;font-weight:500;margin-bottom:4px;">${d.emprunteur||'—'}</div><div style="font-size:11px;color:#7a8d97;margin-bottom:8px;">${d.emprunteurRep||'—'}</div><div style="border:1px solid #e3e8ec;border-radius:8px;min-height:80px;overflow:hidden;">${d.sigEmprunteur?`<img src="${d.sigEmprunteur}" style="width:100%;height:80px;object-fit:contain;">`:''}</div></div></div><div style="padding:10px 18px;border-top:1px solid #f0f4f7;"><div style="font-size:11px;color:#aab8c0;">Fait à ${d.lieu||'—'}, le ${fmtD(d.dateSig)} · Établi en 2 exemplaires · ${d.num||'—'}</div></div></div>
+</div></body></html>`;
+}
+
+// INIT
+window.addEventListener('load',async()=>{
+  msalInstance=new msal.PublicClientApplication({auth:{clientId:SP_CONFIG.clientId,authority:SP_CONFIG.authority,redirectUri:SP_CONFIG.redirectUri},cache:{cacheLocation:'sessionStorage',storeAuthStateInCookie:false}});
+  try{
+    const resp=await msalInstance.handleRedirectPromise();
+    if(resp){spAccount=resp.account;await onSignedIn();return;}
+    const accounts=msalInstance.getAllAccounts();
+    if(accounts.length>0){spAccount=accounts[0];await onSignedIn();return;}
+  }catch(e){console.error(e);}
+  $('login-msg').textContent='';
+});
+</script>
+</body>
+</html>
