@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HEXA — PV de Réception</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js" crossorigin="anonymous"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:#f5f6f8;color:#12161c;min-height:100vh;-webkit-font-smoothing:antialiased;}
+.page{max-width:720px;margin:0 auto;padding:20px 16px 80px;}
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-card{background:#fff;border-radius:20px;border:1px solid #e3e8ec;padding:40px 36px;max-width:420px;width:100%;text-align:center;}
+.login-logo{font-family:'Syne',sans-serif;font-size:42px;font-weight:800;color:#12161c;letter-spacing:-2px;margin-bottom:6px;}
+.login-logo span{color:#6c5ce7;}
+.login-sub{font-size:14px;color:#7a8d97;margin-bottom:8px;}
+.login-module{font-size:13px;font-weight:600;color:#6c5ce7;background:#f0eeff;border:1px solid #c4b8f8;border-radius:20px;padding:4px 14px;display:inline-block;margin-bottom:28px;}
+.login-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#12161c;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;}
+#login-msg{font-size:12px;color:#7a8d97;margin-top:12px;}
+#login-err{font-size:12px;color:#e04444;margin-top:8px;display:none;}
+#app-screen{display:none;}
+.hdr{background:#12161c;border-radius:16px;padding:16px 22px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;letter-spacing:-1px;}
+.logo span{color:#6c5ce7;}
+.av{width:34px;height:34px;border-radius:50%;background:rgba(108,92,231,.2);border:1px solid rgba(108,92,231,.3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#a29af0;flex-shrink:0;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;}
+.btn:hover{opacity:.85;}
+.btn-pur{background:#6c5ce7;color:#fff;}
+.btn-grn{background:#2a9d6f;color:#fff;}
+.btn-outline{background:#fff;color:#12161c;border:1.5px solid #e3e8ec;}
+.btn-cyan{background:#2abbda;color:#fff;}
+.btn-full{width:100%;justify-content:center;}
+.card{background:#fff;border-radius:14px;border:1px solid #e3e8ec;padding:20px;margin-bottom:12px;}
+.card-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#12161c;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.dot{width:8px;height:8px;border-radius:50%;background:#6c5ce7;display:inline-block;}
+.field{margin-bottom:12px;}
+.field label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;display:block;margin-bottom:5px;}
+.field input,.field textarea,.field select{width:100%;padding:10px 14px;border:1.5px solid #e3e8ec;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff;color:#12161c;}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:#6c5ce7;}
+.field textarea{height:70px;resize:vertical;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;}
+.photo-thumb{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#f5f6f8;}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.photo-thumb .del{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;border:none;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.photo-add{display:flex;flex-direction:column;align-items:center;justify-content:center;aspect-ratio:1;border-radius:8px;border:2px dashed #c4b8f8;background:#f0eeff;cursor:pointer;gap:4px;font-size:11px;font-weight:600;color:#6c5ce7;}
+.photo-add input{display:none;}
+.zone-item{background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:8px;border:1px solid #e3e8ec;}
+.zone-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.zone-nom{font-size:13px;font-weight:600;color:#12161c;flex:1;}
+.sev-sel{font-size:11px;padding:4px 10px;border:1px solid #e3e8ec;border-radius:8px;outline:none;background:#fff;}
+.rsv-item{display:flex;align-items:flex-start;gap:10px;padding:10px;background:#fff7e6;border:1px solid #f5d98a;border-radius:10px;margin-bottom:8px;}
+.rsv-num{width:22px;height:22px;border-radius:6px;background:#fff7e6;color:#c47d0a;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #f5d98a;}
+.g-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.g-card{background:#eaf7f1;border:1px solid #a8dfc5;border-radius:10px;padding:12px;text-align:center;}
+.sig-container{position:relative;border:2px dashed #c4b8f8;border-radius:12px;overflow:hidden;background:#fff;}
+.sig-canvas{display:block;width:100%;touch-action:none;cursor:crosshair;}
+.sig-clear{position:absolute;top:8px;right:8px;background:rgba(108,92,231,.1);color:#6c5ce7;border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;}
+.pv-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #e3e8ec;cursor:pointer;}
+.pv-item:last-child{border-bottom:none;}
+.pv-item:hover{background:#f8fafc;margin:0 -20px;padding:12px 20px;}
+.view{display:none;}
+.view.active{display:block;}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#12161c;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+.info-box{background:#f0eeff;border:1px solid #c4b8f8;border-radius:10px;padding:10px 14px;font-size:12px;color:#4a3ea8;margin-bottom:12px;line-height:1.6;}
+.warn-box{background:#fff7e6;border:1px solid #f5d98a;border-radius:10px;padding:10px 14px;font-size:12px;color:#7a4a10;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">HE<span>X</span>A</div>
+    <div class="login-sub">Groupe BCNC</div>
+    <div class="login-module">📋 PV de réception</div>
+    <button class="login-btn" onclick="doLogin()">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="1" y="1" width="8" height="8" fill="#F25022"/><rect x="11" y="1" width="8" height="8" fill="#7FBA00"/><rect x="1" y="11" width="8" height="8" fill="#00A4EF"/><rect x="11" y="11" width="8" height="8" fill="#FFB900"/></svg>
+      Se connecter avec Microsoft 365
+    </button>
+    <div id="login-msg"></div>
+    <div id="login-err"></div>
+  </div>
+</div>
+
+<div id="app-screen">
+<div class="page">
+  <div class="hdr">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <a href="hexa-accueil.html" style="color:#7a8d97;font-size:18px;text-decoration:none;line-height:1;">←</a>
+      <div class="logo">HE<span>X</span>A <span style="font-size:12px;font-weight:500;color:#7a8d97;letter-spacing:0;">PV de réception</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div style="text-align:right;"><div style="font-size:13px;font-weight:500;color:#fff;" id="hdr-name">—</div><div style="font-size:10px;color:#7a8d97;" id="hdr-role">—</div></div>
+      <div class="av" id="hdr-av">?</div>
+    </div>
+  </div>
+
+  <!-- VUE LISTE -->
+  <div class="view active" id="view-list">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;">Procès-verbaux</div>
+        <div style="font-size:13px;color:#7a8d97;margin-top:2px;" id="pv-count">—</div>
+      </div>
+      <button class="btn btn-pur" onclick="openNewPV()">+ Nouveau PV</button>
+    </div>
+    <div class="card" id="gh-token-card" style="border:1.5px solid #f5d98a;background:#fffdf5;margin-bottom:12px;display:none;">
+      <div style="font-size:12px;font-weight:600;color:#7a4a10;margin-bottom:8px;">⚠️ Token GitHub requis pour publier les liens clients</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="password" id="pv-gh-token" placeholder="ghp_xxxxxxxxxxxx" style="flex:1;padding:9px 12px;border:1.5px solid #f5d98a;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;">
+        <button class="btn btn-outline" onclick="saveGhToken()" style="white-space:nowrap;border-color:#f5d98a;">Enregistrer</button>
+      </div>
+    </div>
+    <div class="card">
+      <div id="pv-list"><div style="text-align:center;padding:32px;font-size:13px;color:#7a8d97;">Aucun PV créé</div></div>
+    </div>
+  </div>
+
+  <!-- VUE FORMULAIRE -->
+  <div class="view" id="view-form">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <button class="btn btn-outline" onclick="showList()" style="padding:8px 14px;">← Retour</button>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;" id="form-title">Nouveau PV</div>
+    </div>
+
+    <!-- 1. IDENTIFICATION -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Identification des parties</div>
+      <div class="row2">
+        <div class="field"><label>Client / Donneur d'ordre</label><input type="text" id="pv-client" placeholder="Heurtier Voiron" oninput="updateSigNames()"></div>
+        <div class="field"><label>Représentant client</label><input type="text" id="pv-representant" placeholder="Marc Delorme" oninput="updateSigNames()"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Qualité du représentant</label><input type="text" id="pv-qualite" placeholder="Syndic de copropriété"></div>
+        <div class="field"><label>Email client</label><input type="email" id="pv-email-client" placeholder="contact@syndic.fr"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Chantier / Résidence</label><input type="text" id="pv-chantier" placeholder="Résidence Les Pins"></div>
+        <div class="field"><label>Adresse complète</label><input type="text" id="pv-adresse" placeholder="10 Grande Rue, 38500 Voiron"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Entreprise réalisatrice</label><select id="pv-entreprise" onchange="onEntrepriseChange()"><option value="">— Sélectionner —</option></select></div>
+        <div class="field"><label>Responsable de chantier</label><input type="text" id="pv-tech" placeholder="Irid Abdelkader" oninput="updateSigNames()"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Réf. devis / marché</label><input type="text" id="pv-ref-devis" placeholder="DEV-2026-0089"></div>
+        <div class="field"><label>Date de réception</label><input type="date" id="pv-date" onchange="calcGaranties();calcEntretien();"></div>
+      </div>
+      <div class="field"><label>N° de demande client (OS)</label><input type="text" id="pv-os" placeholder="OS-2026-1147"></div>
+    </div>
+
+    <!-- 2. TRAVAUX RÉALISÉS -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Travaux réalisés</div>
+      <div class="field"><textarea id="pv-travaux" style="height:90px;" placeholder="Reprise complète de l'étanchéité en toiture-terrasse — membrane bitumineuse bicouche SBS, isolation 120mm, relevés 30cm..."></textarea></div>
+      <div class="row2">
+        <div class="field"><label>Surface traitée (m²)</label><input type="number" id="pv-surface" placeholder="320" min="0"></div>
+        <div class="field"><label>Type de toiture</label><select id="pv-type-toiture"><option>Toiture-terrasse</option><option>Toiture en pente</option><option>Toiture zinc</option><option>Bac acier</option><option>Toiture tuile</option><option>Ardoise</option></select></div>
+      </div>
+    </div>
+
+    <!-- 3. MATÉRIAUX POSÉS -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Matériaux et produits posés</div>
+      <div class="info-box">💡 Renseignez les références exactes des matériaux — marque, référence, certification. Permet d'engager la garantie fabricant.</div>
+      <div id="mat-list"></div>
+      <button class="btn btn-outline" onclick="addMateriauPV()" style="font-size:12px;padding:8px 14px;margin-top:4px;">+ Ajouter un matériau</button>
+    </div>
+
+    <!-- 4. PÉRIMÈTRE ET PROTECTION LÉGALE -->
+    <div class="card" style="border:1.5px solid #c4b8f8;">
+      <div class="card-title"><span class="dot" style="background:#6c5ce7;"></span>Périmètre des travaux · Protection légale</div>
+      <div class="warn-box">⚖️ Ce document vous protège juridiquement. Précisez clairement ce qui est couvert et ce qui ne l'est pas.</div>
+      <div class="field" style="margin-top:10px;"><label>Zones couvertes par la garantie</label><textarea id="pv-zones-couvertes" style="height:70px;" placeholder="Ex: Toiture-terrasse accessible niveau R+4, relevés périmétraux, entrées d'eaux pluviales..."></textarea></div>
+      <div class="field"><label>Zones exclues de la garantie ⚠️</label><textarea id="pv-zones-exclues" style="height:70px;" placeholder="Ex: Versant nord non inclus dans le marché, joints de façade, étanchéité des souches..."></textarea></div>
+      <div class="field"><label>Clause légale de non-responsabilité</label>
+        <textarea id="pv-clause" style="height:80px;">Les zones, ouvrages et désordres non mentionnés dans le présent périmètre restent sous l'entière responsabilité du maître d'ouvrage. L'entreprise ne saurait être tenue responsable de pathologies survenant dans des zones non comprises dans le marché de travaux référencé ci-dessus.</textarea>
+      </div>
+    </div>
+
+    <!-- 5. ÉTAT DE LA TOITURE À LA RÉCEPTION -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>État général de la toiture à la réception</div>
+      <div class="row3">
+        <div class="field">
+          <label>Score de santé global</label>
+          <select id="pv-score">
+            <option value="bon">🟢 Bon état</option>
+            <option value="moyen">🟡 État moyen</option>
+            <option value="degrade">🔴 Dégradé</option>
+          </select>
+        </div>
+        <div class="field"><label>Âge estimé de la toiture</label><input type="text" id="pv-age" placeholder="15 à 20 ans"></div>
+        <div class="field"><label>Durée de vie restante estimée</label><input type="text" id="pv-duree-vie" placeholder="15 à 20 ans"></div>
+      </div>
+      <div class="field"><label>Observations générales à la réception</label><textarea id="pv-observations" style="height:70px;" placeholder="Toiture en bon état après intervention. Étanchéité restaurée sur l'ensemble du périmètre traité..."></textarea></div>
+    </div>
+
+    <!-- 6. ZONES À SURVEILLER -->
+    <div class="card" style="border:1.5px solid #f5d98a;background:#fffdf5;">
+      <div class="card-title"><span class="dot" style="background:#c47d0a;"></span>Zones à surveiller — hors périmètre</div>
+      <div class="warn-box">💶 Ces zones identifiées lors de l'intervention nécessitent une attention particulière. Elles constituent votre protection légale et votre outil commercial.</div>
+      <div id="surveillance-list" style="margin-top:10px;"></div>
+      <button class="btn btn-outline" onclick="addZoneSurveillance()" style="font-size:12px;padding:8px 14px;margin-top:4px;border-color:#f5d98a;color:#c47d0a;">+ Ajouter une zone à surveiller</button>
+    </div>
+
+    <!-- 7. PHOTOS -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Photos de réalisation</div>
+      <div style="font-size:12px;color:#7a8d97;margin-bottom:10px;">Photos de l'état final après travaux — avant/après si disponibles</div>
+      <div class="photo-grid" id="pv-photo-grid"></div>
+    </div>
+
+    <!-- 8. RÉSERVES -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Réserves à la réception</div>
+      <div style="font-size:12px;color:#7a8d97;margin-bottom:10px;">Laissez vide si réception sans réserve.</div>
+      <div id="pv-reserves-list"></div>
+      <button class="btn btn-outline" onclick="addReserve()" style="font-size:12px;padding:8px 14px;margin-top:6px;">+ Ajouter une réserve</button>
+      <div id="sans-reserve-block" style="margin-top:10px;padding:10px 14px;background:#eaf7f1;border:1px solid #a8dfc5;border-radius:10px;font-size:12px;color:#1a5740;display:none;">
+        ✅ Réception sans réserve — les travaux sont conformes à la commande
+      </div>
+    </div>
+
+    <!-- 9. GARANTIES -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Garanties applicables</div>
+      <div class="g-cards" id="pv-garanties">
+        <div class="g-card"><div style="font-size:11px;font-weight:600;color:#1a5740;">Parfait achèvement</div><div style="font-size:22px;font-weight:700;color:#2a9d6f;margin:4px 0;">1 an</div><div style="font-size:11px;color:#1a5740;" id="g1">—</div></div>
+        <div class="g-card"><div style="font-size:11px;font-weight:600;color:#1a5740;">Garantie biennale</div><div style="font-size:22px;font-weight:700;color:#2a9d6f;margin:4px 0;">2 ans</div><div style="font-size:11px;color:#1a5740;" id="g2">—</div></div>
+        <div class="g-card"><div style="font-size:11px;font-weight:600;color:#1a5740;">Garantie décennale</div><div style="font-size:22px;font-weight:700;color:#2a9d6f;margin:4px 0;">10 ans</div><div style="font-size:11px;color:#1a5740;" id="g10">—</div></div>
+      </div>
+      <div class="field" style="margin-top:12px;"><label>Garantie fabricant (si applicable)</label><input type="text" id="pv-garantie-fab" placeholder="Ex: Garantie Soprema 10 ans · réf. certificat GT-2026-XXX"></div>
+    </div>
+
+    <!-- 10. CONTRAT D'ENTRETIEN -->
+    <div class="card" style="border:1.5px solid #b3eaf4;background:#eaf9fc;">
+      <div class="card-title"><span class="dot" style="background:#2abbda;"></span>Proposition de contrat d'entretien</div>
+      <div class="info-box" style="background:#d4f4fa;border-color:#7ee8f8;color:#085670;">🔄 Un contrat d'entretien annuel prolonge la durée de vie de la toiture et protège vos garanties. Proposez-le systématiquement à chaque réception.</div>
+      <div class="row2" style="margin-top:10px;">
+        <div class="field"><label>Visite de contrôle recommandée dans</label>
+          <select id="pv-visite-delai">
+            <option value="6">6 mois</option>
+            <option value="12" selected>12 mois</option>
+            <option value="24">24 mois</option>
+          </select>
+        </div>
+        <div class="field"><label>Date recommandée de visite</label><input type="text" id="pv-date-visite" readonly style="background:#f0f4f7;color:#7a8d97;"></div>
+      </div>
+      <div class="field"><label>Prestations incluses dans le contrat proposé</label>
+        <textarea id="pv-entretien-prestations" style="height:70px;">Visite annuelle de contrôle · Nettoyage des entrées d'eaux pluviales · Vérification des points singuliers · Rapport de visite écrit · Intervention d'urgence sous 48h</textarea>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Estimation annuelle HT</label><input type="number" id="pv-entretien-prix" placeholder="450" min="0"></div>
+        <div class="field"><label>Fréquence</label>
+          <select id="pv-entretien-freq">
+            <option>Annuelle</option>
+            <option>Semestrielle</option>
+            <option>Trimestrielle</option>
+          </select>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#085670;margin-top:4px;">💡 Le bouton "Demander un devis" sera inclus dans le PV envoyé au client — il déclenchera un email automatique à votre service commercial.</div>
+    </div>
+
+    <!-- 11. SIGNATURES -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Signatures</div>
+      <div style="font-size:12px;color:#7a8d97;margin-bottom:14px;">Sur mobile : tendez le téléphone au client pour sa signature.</div>
+      <div class="row2">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin-bottom:4px;">Client</div>
+          <div style="font-size:12px;color:#12161c;margin-bottom:8px;" id="sig-client-name">—</div>
+          <div class="sig-container">
+            <canvas class="sig-canvas" id="sig-client" width="300" height="130"></canvas>
+            <button class="sig-clear" onclick="clearSig('client')">Effacer</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#7a8d97;margin-bottom:4px;">Cachet + signature entreprise</div>
+          <div style="font-size:12px;color:#12161c;margin-bottom:8px;" id="sig-tech-name">—</div>
+          <div class="sig-container" style="position:relative;">
+            <!-- Tampon en fond -->
+            <div id="tampon-preview" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:0;"></div>
+            <canvas class="sig-canvas" id="sig-tech" width="300" height="130" style="position:relative;z-index:1;"></canvas>
+            <button class="sig-clear" onclick="clearSig('tech')" style="z-index:2;">Effacer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="saveDraft()" style="flex:1;">💾 Sauvegarder</button>
+      <button class="btn btn-cyan" onclick="sendLienClient()" style="flex:1;">✉️ Envoyer au client</button>
+      <button class="btn btn-grn" onclick="genererPV()" style="flex:2;">✓ Générer et archiver le PV</button>
+    </div>
+    <div id="form-err" style="margin-top:10px;"></div>
+  </div>
+
+</div>
+</div>
+<div id="toast"></div>
+
+<script>
+const SP_CONFIG={clientId:'ce885b92-7692-4ca5-aae6-756a5e94a792',tenantId:'de95b546-4d79-47f1-aafe-8926ca63e424',authority:'https://login.microsoftonline.com/de95b546-4d79-47f1-aafe-8926ca63e424',redirectUri:'https://bannequin.github.io/hexa/hexa-accueil.html',spSite:'https://martincharpentefr.sharepoint.com',scopes:['User.Read','Files.ReadWrite.All','Calendars.ReadWrite','Sites.ReadWrite.All','Mail.Send','offline_access']};
+const ADMIN_EMAILS=['ba@groupebcnc.com','ca@groupebcnc.com','li@alptech-etancheite.fr'];
+let msalInstance=null,spAccount=null,spToken=null,spSiteId=null,spListId=null,currentEmail='',currentRole='',currentName='';
+let DB={interventions:[],pvReceptions:[],entreprises:[],techniciens:[]};
+let pvPhotos=[],pvReserves=[],pvMateriaux=[],pvSurveillance=[],editingPVId=null;
+
+function $(id){return document.getElementById(id);}
+function ini(n){return(n||'').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();}
+function toast(msg,dur=3500){const el=$('toast');el.textContent=msg;el.style.opacity='1';setTimeout(()=>el.style.opacity='0',dur);}
+function fmtD(d){if(!d)return'—';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;}
+function addY(dateStr,n){try{const d=new Date(dateStr);d.setFullYear(d.getFullYear()+n);return d.toLocaleDateString('fr-FR');}catch(e){return'—';}}
+function genNumPV(){const y=new Date().getFullYear();const n=((DB.pvReceptions||[]).filter(p=>p.numPV?.includes(y)).length+1).toString().padStart(4,'0');return`PVR-${y}-${n}`;}
+function h(){const h=new Date().getHours();return h<12?'Bonjour':h<18?'Bon après-midi':'Bonsoir';}
+
+async function graphCall(method,url,body=null){
+  await spGetToken();
+  const opts={method,headers:{'Authorization':'Bearer '+spToken,'Content-Type':'application/json'}};
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(url,opts);
+  if(!r.ok&&r.status!==204&&r.status!==202)throw new Error('Graph '+r.status);
+  if(r.status===204||r.status===202)return{};
+  return r.json();
+}
+async function spGetToken(){
+  try{const r=await msalInstance.acquireTokenSilent({scopes:SP_CONFIG.scopes,account:spAccount});spToken=r.accessToken;return spToken;}
+  catch(e){try{const r=await msalInstance.acquireTokenPopup({scopes:SP_CONFIG.scopes,account:spAccount});spToken=r.accessToken;return spToken;}catch(e2){return null;}}
+}
+async function spInit(){
+  try{
+    const base='https://graph.microsoft.com/v1.0';
+    const site=await graphCall('GET',`${base}/sites/${SP_CONFIG.spSite.replace('https://','')}`);
+    spSiteId=site.id;
+    const lists=await graphCall('GET',`${base}/sites/${spSiteId}/lists?$filter=displayName eq 'HexaDB'`);
+    if(!lists.value?.length)return false;
+    spListId=lists.value[0].id;
+    return true;
+  }catch(e){return false;}
+}
+async function spPull(){
+  try{
+    const base='https://graph.microsoft.com/v1.0';
+    const items=await graphCall('GET',`${base}/sites/${spSiteId}/lists/${spListId}/items?$expand=fields`);
+    const main=items.value?.find(i=>i.fields?.HexaKey==='main_db');
+    if(!main)return;
+    Object.assign(DB,JSON.parse(main.fields.HexaData));
+    try{localStorage.setItem('hexa_db2',JSON.stringify(DB));}catch(e){}
+  }catch(e){}
+}
+async function spPush(){
+  try{
+    const base='https://graph.microsoft.com/v1.0';
+    const clean=JSON.parse(JSON.stringify(DB));
+    clean.pvReceptions=(clean.pvReceptions||[]).map(p=>({...p,photos:[],sigClient:'',sigTech:''}));
+    clean.entreprises=clean.entreprises?.map(e=>({...e,logo:null}));
+    clean.interventions=clean.interventions?.map(i=>{if(!i.rapport)return i;const r={...i.rapport};delete r.generalPhotos;delete r.zonePhotos;return{...i,rapport:r};});
+    const json=JSON.stringify(clean);
+    const items=await graphCall('GET',`${base}/sites/${spSiteId}/lists/${spListId}/items?$expand=fields`);
+    const main=items.value?.find(i=>i.fields?.HexaKey==='main_db');
+    if(main)await graphCall('PATCH',`${base}/sites/${spSiteId}/lists/${spListId}/items/${main.id}/fields`,{HexaData:json});
+  }catch(e){console.warn('spPush:',e);}
+}
+function saveDB(){DB._v=Date.now();try{localStorage.setItem('hexa_db2',JSON.stringify(DB));}catch(e){}spPush();}
+
+async function getRole(em){
+  if(ADMIN_EMAILS.includes(em))return'admin';
+  if((DB.groupe?.adminEmail||'').toLowerCase()===em)return'admin';
+  if((DB.entreprises||[]).some(e=>e.directeur?.email?.toLowerCase()===em))return'directeur';
+  const a=(DB.acces||[]).find(a=>a.email?.toLowerCase()===em);
+  if(a)return a.role||'admin';
+  return null;
+}
+
+async function doLogin(){
+  try{
+    $('login-msg').textContent='Connexion en cours...';
+    if(!msalInstance)msalInstance=new msal.PublicClientApplication({auth:{clientId:SP_CONFIG.clientId,authority:SP_CONFIG.authority,redirectUri:SP_CONFIG.redirectUri},cache:{cacheLocation:'sessionStorage',storeAuthStateInCookie:false}});
+    await msalInstance.loginRedirect({scopes:SP_CONFIG.scopes});
+  }catch(e){$('login-err').textContent='Erreur : '+e.message;$('login-err').style.display='block';}
+}
+
+async function onSignedIn(){
+  $('login-msg').textContent='Chargement...';
+  try{const d=localStorage.getItem('hexa_db2');if(d)Object.assign(DB,JSON.parse(d));}catch(e){}
+  const spOk=await spInit();
+  if(spOk)await spPull();
+  currentEmail=spAccount.username?.toLowerCase()||'';
+  currentName=spAccount.name||spAccount.username;
+  currentRole=await getRole(currentEmail);
+  if(!currentRole||currentRole==='technicien'){
+    $('login-err').textContent='Accès réservé aux directeurs et conducteurs de travaux.';
+    $('login-err').style.display='block';
+    $('login-msg').textContent='';
+    return;
+  }
+  $('login-screen').style.display='none';
+  $('app-screen').style.display='block';
+  const roleLabels={admin:'Administrateur',directeur:'Directeur',conducteur:'Conducteur de travaux'};
+  $('hdr-name').textContent=currentName;
+  $('hdr-role').textContent=roleLabels[currentRole]||currentRole;
+  $('hdr-av').textContent=ini(currentName);
+  initEntreprises();
+  initSigCanvas('client');
+  initSigCanvas('tech');
+  renderPVList();
+  checkGhToken();
+  $('pv-date').value=new Date().toISOString().split('T')[0];
+  calcGaranties();
+  calcEntretien();
+  $('pv-visite-delai').addEventListener('change',calcEntretien);
+  renderPhotoGrid();
+  renderMateriaux();
+  renderSurveillance();
+  renderReserves();
+}
+
+function initEntreprises(){
+  const sel=$('pv-entreprise');
+  sel.innerHTML='<option value="">— Sélectionner —</option>'+(DB.entreprises||[]).map(e=>`<option value="${e.id}">${e.nom}</option>`).join('');
+}
+function onEntrepriseChange(){
+  const ent=(DB.entreprises||[]).find(e=>e.id===$('pv-entreprise').value);
+  if(ent){
+    if(!$('pv-tech').value&&ent.directeur?.nom)$('pv-tech').value=ent.directeur.nom;
+    renderTamponPreview(ent);
+    updateSigNames();
+  }
+}
+function updateSigNames(){
+  $('sig-client-name').textContent=[$('pv-representant').value,$('pv-qualite').value].filter(Boolean).join(' · ')||'—';
+  $('sig-tech-name').textContent=$('pv-tech').value||'—';
+}
+
+// ── TAMPON ────────────────────────────────────────────────────────────────────
+function buildTamponSVG(ent,w=170,h=90){
+  const nom=(ent.nom||'HEXA').toUpperCase();
+  const adresse=(ent.adresse||'36 CH. DES FONTAINES · 38190 BERNIN').toUpperCase();
+  const couleur=ent.couleur||'#2abbda';
+  return`<svg width="${w}" height="${h}" viewBox="0 0 320 130" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="2" width="316" height="126" rx="4" fill="none" stroke="${couleur}" stroke-width="2.5"/>
+    <rect x="8" y="8" width="304" height="114" rx="2" fill="none" stroke="${couleur}" stroke-width="1"/>
+    <line x1="20" y1="48" x2="300" y2="48" stroke="${couleur}" stroke-width=".8"/>
+    <line x1="20" y1="88" x2="300" y2="88" stroke="${couleur}" stroke-width=".8"/>
+    <text x="160" y="33" font-family="DM Sans,sans-serif" font-size="9" font-weight="700" letter-spacing="3" fill="${couleur}" text-anchor="middle">PV DE RÉCEPTION DE TRAVAUX</text>
+    <text x="160" y="72" font-family="DM Sans,sans-serif" font-size="22" font-weight="800" letter-spacing="-1" fill="${couleur}" text-anchor="middle">${nom}</text>
+    <text x="160" y="100" font-family="DM Sans,sans-serif" font-size="7.5" letter-spacing="1.5" fill="${couleur}" text-anchor="middle">${adresse.substring(0,50)}</text>
+    <text x="160" y="114" font-family="DM Sans,sans-serif" font-size="7" letter-spacing="1" fill="${couleur}" text-anchor="middle">GROUPE BCNC</text>
+    <text x="30" y="71" font-size="8" fill="${couleur}" text-anchor="middle">✦</text>
+    <text x="290" y="71" font-size="8" fill="${couleur}" text-anchor="middle">✦</text>
+  </svg>`;
+}
+function renderTamponPreview(ent){
+  const el=$('tampon-preview');
+  if(el)el.innerHTML=buildTamponSVG(ent,170,90);
+}
+
+// ── SIGNATURES ────────────────────────────────────────────────────────────────
+function initSigCanvas(type){
+  const canvas=$(type==='client'?'sig-client':'sig-tech');
+  const ctx=canvas.getContext('2d');
+  ctx.strokeStyle='#12161c';ctx.lineWidth=2;ctx.lineCap='round';ctx.lineJoin='round';
+  let drawing=false,lastX=0,lastY=0;
+  function getPos(e){const rect=canvas.getBoundingClientRect();const src=e.touches?e.touches[0]:e;return{x:(src.clientX-rect.left)*(canvas.width/rect.width),y:(src.clientY-rect.top)*(canvas.height/rect.height)};}
+  canvas.addEventListener('mousedown',e=>{drawing=true;const p=getPos(e);lastX=p.x;lastY=p.y;});
+  canvas.addEventListener('mousemove',e=>{if(!drawing)return;const p=getPos(e);ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(p.x,p.y);ctx.stroke();lastX=p.x;lastY=p.y;});
+  canvas.addEventListener('mouseup',()=>drawing=false);
+  canvas.addEventListener('mouseleave',()=>drawing=false);
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=getPos(e);lastX=p.x;lastY=p.y;},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!drawing)return;const p=getPos(e);ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(p.x,p.y);ctx.stroke();lastX=p.x;lastY=p.y;},{passive:false});
+  canvas.addEventListener('touchend',()=>drawing=false);
+}
+function clearSig(type){const canvas=$(type==='client'?'sig-client':'sig-tech');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);}
+function getSig(type){
+  const canvas=$(type==='client'?'sig-client':'sig-tech');
+  const ctx=canvas.getContext('2d');
+  const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+  return data.some((v,i)=>i%4===3&&v>0)?canvas.toDataURL('image/png'):'';
+}
+
+// ── PHOTOS ────────────────────────────────────────────────────────────────────
+function resizeImg(file){return new Promise(res=>{const reader=new FileReader();reader.onload=e=>{const img=new Image();img.onload=()=>{const max=900,scale=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=img.width*scale;c.height=img.height*scale;c.getContext('2d').drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.78));};img.src=e.target.result;};reader.readAsDataURL(file);});}
+function renderPhotoGrid(){
+  const grid=$('pv-photo-grid');
+  grid.innerHTML=pvPhotos.map((src,i)=>`<div class="photo-thumb"><img src="${src}" loading="lazy"><button class="del" onclick="pvPhotos.splice(${i},1);renderPhotoGrid();">✕</button></div>`).join('')
+    +`<label class="photo-add"><span style="font-size:22px;">📷</span><span>Photo</span><input type="file" accept="image/*" capture="environment" multiple onchange="addPVPhotos(event)"></label>`
+    +`<label class="photo-add"><span style="font-size:22px;">🖼</span><span>Galerie</span><input type="file" accept="image/*" multiple onchange="addPVPhotos(event)"></label>`;
+}
+async function addPVPhotos(e){for(const f of Array.from(e.target.files)){pvPhotos.push(await resizeImg(f));}renderPhotoGrid();}
+
+// ── MATÉRIAUX ─────────────────────────────────────────────────────────────────
+function addMateriauPV(nom='',ref='',certif=''){
+  pvMateriaux.push({id:Date.now(),nom,ref,certif});renderMateriaux();
+}
+function removeMateriauPV(id){pvMateriaux=pvMateriaux.filter(m=>m.id!==id);renderMateriaux();}
+function renderMateriaux(){
+  $('mat-list').innerHTML=pvMateriaux.map((m,i)=>`
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;align-items:center;margin-bottom:8px;">
+      <input type="text" value="${m.nom}" onchange="pvMateriaux[${i}].nom=this.value" placeholder="Ex: Membrane Soprema Sopralène 180 S4" style="padding:8px 10px;border:1px solid #e3e8ec;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;">
+      <input type="text" value="${m.ref}" onchange="pvMateriaux[${i}].ref=this.value" placeholder="Réf. fabricant" style="padding:8px 10px;border:1px solid #e3e8ec;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;">
+      <input type="text" value="${m.certif}" onchange="pvMateriaux[${i}].certif=this.value" placeholder="Certification (ACERMI...)" style="padding:8px 10px;border:1px solid #e3e8ec;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;">
+      <button onclick="removeMateriauPV(${m.id})" style="background:none;border:none;color:#aab8c0;cursor:pointer;font-size:16px;padding:4px;">✕</button>
+    </div>`).join('')||'<div style="font-size:12px;color:#aab8c0;padding:6px 0;">Aucun matériau renseigné</div>';
+}
+
+// ── ZONES À SURVEILLER ────────────────────────────────────────────────────────
+function addZoneSurveillance(){pvSurveillance.push({id:Date.now(),zone:'',description:'',urgence:'moyen',budget:''});renderSurveillance();}
+function removeZoneSurv(id){pvSurveillance=pvSurveillance.filter(z=>z.id!==id);renderSurveillance();}
+function renderSurveillance(){
+  $('surveillance-list').innerHTML=pvSurveillance.map((z,i)=>`
+    <div style="background:#fff;border:1px solid #f5d98a;border-radius:10px;padding:12px;margin-bottom:8px;">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center;">
+        <input type="text" value="${z.zone}" onchange="pvSurveillance[${i}].zone=this.value" placeholder="Zone concernée (ex: Versant Nord)" style="padding:7px 10px;border:1px solid #e3e8ec;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;">
+        <select onchange="pvSurveillance[${i}].urgence=this.value" style="padding:7px;border:1px solid #e3e8ec;border-radius:8px;font-size:12px;outline:none;">
+          <option value="faible" ${z.urgence==='faible'?'selected':''}>À surveiller</option>
+          <option value="moyen" ${z.urgence==='moyen'?'selected':''}>Intervention < 2 ans</option>
+          <option value="urgent" ${z.urgence==='urgent'?'selected':''}>Urgent < 1 an</option>
+        </select>
+        <input type="text" value="${z.budget}" onchange="pvSurveillance[${i}].budget=this.value" placeholder="Budget estimé (€)" style="padding:7px 10px;border:1px solid #e3e8ec;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;">
+        <button onclick="removeZoneSurv(${z.id})" style="background:none;border:none;color:#aab8c0;cursor:pointer;font-size:16px;padding:4px;">✕</button>
+      </div>
+      <input type="text" value="${z.description}" onchange="pvSurveillance[${i}].description=this.value" placeholder="Description du désordre observé..." style="width:100%;padding:7px 10px;border:1px solid #e3e8ec;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;">
+    </div>`).join('')||'<div style="font-size:12px;color:#aab8c0;padding:4px 0;">Aucune zone à signaler</div>';
+}
+
+// ── RÉSERVES ──────────────────────────────────────────────────────────────────
+function addReserve(){pvReserves.push({id:Date.now(),description:'',delai:'',statut:'en_attente'});renderReserves();$('sans-reserve-block').style.display='none';}
+function removeReserve(id){pvReserves=pvReserves.filter(r=>r.id!==id);renderReserves();}
+function renderReserves(){
+  $('pv-reserves-list').innerHTML=pvReserves.map((r,i)=>`
+    <div class="rsv-item">
+      <div class="rsv-num">${i+1}</div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+        <input type="text" value="${r.description}" onchange="pvReserves[${i}].description=this.value" placeholder="Décrire la réserve précisément..." style="padding:7px 10px;border:1px solid #f5d98a;border-radius:8px;font-size:13px;outline:none;font-family:'DM Sans',sans-serif;background:#fff;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="font-size:11px;color:#7a8d97;font-weight:400;">Délai de levée :</label>
+          <input type="date" value="${r.delai||''}" onchange="pvReserves[${i}].delai=this.value" style="padding:4px 8px;border:1px solid #f5d98a;border-radius:6px;font-size:12px;outline:none;background:#fff;">
+        </div>
+      </div>
+      <button onclick="removeReserve(${r.id})" style="background:none;border:none;color:#aab8c0;cursor:pointer;font-size:16px;padding:4px;">✕</button>
+    </div>`).join('');
+  $('sans-reserve-block').style.display=pvReserves.length===0?'block':'none';
+}
+
+// ── GARANTIES + ENTRETIEN ─────────────────────────────────────────────────────
+function calcGaranties(){
+  const d=$('pv-date').value;
+  $('g1').textContent=d?`Jusqu\'au ${addY(d,1)}`:'—';
+  $('g2').textContent=d?`Jusqu\'au ${addY(d,2)}`:'—';
+  $('g10').textContent=d?`Jusqu\'au ${addY(d,10)}`:'—';
+}
+function calcEntretien(){
+  const d=$('pv-date').value;
+  const mois=parseInt($('pv-visite-delai').value)||12;
+  if(d){const dt=new Date(d);dt.setMonth(dt.getMonth()+mois);$('pv-date-visite').value=dt.toLocaleDateString('fr-FR');}
+}
+
+// ── LISTE PV ──────────────────────────────────────────────────────────────────
+function saveGhToken(){
+  const v=$('pv-gh-token').value.trim();
+  if(!v)return;
+  DB.githubToken=v;
+  localStorage.setItem('hexa_gh_token',v);
+  saveDB();
+  $('gh-token-card').style.display='none';
+  toast('✓ Token GitHub enregistré');
+}
+function checkGhToken(){
+  const t=DB.githubToken||localStorage.getItem('hexa_gh_token')||'';
+  if(!t)$('gh-token-card').style.display='block';
+  else $('gh-token-card').style.display='none';
+}
+function renderPVList(){
+  const list=DB.pvReceptions||[];
+  $('pv-count').textContent=`${list.length} procès-verbal${list.length!==1?'s':''}`;
+  if(!list.length){$('pv-list').innerHTML='<div style="text-align:center;padding:32px;font-size:13px;color:#7a8d97;">Aucun PV créé</div>';return;}
+  $('pv-list').innerHTML=[...list].reverse().map(pv=>`
+    <div class="pv-item" onclick="openEditPV('${pv.id}')">
+      <div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${pv.statut==='signe'?'#2a9d6f':'#c47d0a'};"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pv.client}${pv.chantier?' — '+pv.chantier:''}</div>
+        <div style="font-size:11px;color:#7a8d97;margin-top:2px;">${pv.numPV||'—'} · ${fmtD(pv.dateReception)} · ${pv.entrepriseNom||'—'}</div>
+      </div>
+      <div style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:${pv.statut==='signe'?'#eaf7f1':'#fff7e6'};color:${pv.statut==='signe'?'#085041':'#854f0b'};">${pv.statut==='signe'?'Signé':'Brouillon'}</div>
+    </div>`).join('');
+}
+function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(id)?.classList.add('active');}
+function showList(){showView('view-list');renderPVList();}
+
+function openNewPV(){
+  editingPVId=null;pvPhotos=[];pvReserves=[];pvMateriaux=[];pvSurveillance=[];
+  $('form-title').textContent='Nouveau PV';
+  ['pv-client','pv-representant','pv-qualite','pv-email-client','pv-chantier','pv-adresse','pv-tech','pv-ref-devis','pv-os','pv-travaux','pv-zones-couvertes','pv-zones-exclues','pv-observations','pv-garantie-fab','pv-entretien-prix','pv-age','pv-duree-vie'].forEach(id=>{if($(id))$(id).value='';});
+  $('pv-entreprise').value='';
+  $('pv-date').value=new Date().toISOString().split('T')[0];
+  $('pv-clause').value='Les zones, ouvrages et désordres non mentionnés dans le présent périmètre restent sous l\'entière responsabilité du maître d\'ouvrage. L\'entreprise ne saurait être tenue responsable de pathologies survenant dans des zones non comprises dans le marché de travaux référencé ci-dessus.';
+  $('pv-entretien-prestations').value='Visite annuelle de contrôle · Nettoyage des entrées d\'eaux pluviales · Vérification des points singuliers · Rapport de visite écrit · Intervention d\'urgence sous 48h';
+  clearSig('client');clearSig('tech');
+  $('tampon-preview').innerHTML='';
+  renderReserves();renderPhotoGrid();renderMateriaux();renderSurveillance();calcGaranties();calcEntretien();updateSigNames();
+  showView('view-form');
+}
+
+function openEditPV(id){
+  const pv=(DB.pvReceptions||[]).find(p=>p.id===id);
+  if(!pv)return;
+  editingPVId=id;pvPhotos=[...(pv.photos||[])];pvReserves=[...(pv.reserves||[])];pvMateriaux=[...(pv.materiaux||[])];pvSurveillance=[...(pv.surveillance||[])];
+  $('form-title').textContent=pv.numPV||'PV';
+  const fields={
+    'pv-client':pv.client,'pv-representant':pv.representant,'pv-qualite':pv.qualite,
+    'pv-email-client':pv.emailClient,'pv-chantier':pv.chantier,'pv-adresse':pv.adresse,
+    'pv-tech':pv.techNom,'pv-ref-devis':pv.refDevis,'pv-os':pv.os,'pv-travaux':pv.travaux,
+    'pv-zones-couvertes':pv.zonesCouvertes,'pv-zones-exclues':pv.zonesExclues,
+    'pv-clause':pv.clause,'pv-observations':pv.observations,'pv-garantie-fab':pv.garantieFab,
+    'pv-entretien-prix':pv.entretienPrix,'pv-entretien-prestations':pv.entretienPrestations,
+    'pv-age':pv.ageToiture,'pv-duree-vie':pv.dureeVieRestante
+  };
+  Object.entries(fields).forEach(([k,v])=>{if($(k)&&v!==undefined)$(k).value=v||'';});
+  $('pv-date').value=pv.dateReception||'';
+  $('pv-entreprise').value=pv.entrepriseId||'';
+  $('pv-score').value=pv.score||'bon';
+  $('pv-type-toiture').value=pv.typeToiture||'Toiture-terrasse';
+  const ent=(DB.entreprises||[]).find(e=>e.id===pv.entrepriseId);
+  if(ent)renderTamponPreview(ent);
+  clearSig('client');clearSig('tech');
+  if(pv.sigClient){const img=new Image();img.onload=()=>$('sig-client').getContext('2d').drawImage(img,0,0,$('sig-client').width,$('sig-client').height);img.src=pv.sigClient;}
+  if(pv.sigTech){const img=new Image();img.onload=()=>$('sig-tech').getContext('2d').drawImage(img,0,0,$('sig-tech').width,$('sig-tech').height);img.src=pv.sigTech;}
+  renderReserves();renderPhotoGrid();renderMateriaux();renderSurveillance();calcGaranties();calcEntretien();updateSigNames();
+  showView('view-form');
+}
+
+function collectFormData(){
+  const entId=$('pv-entreprise').value;
+  const ent=(DB.entreprises||[]).find(e=>e.id===entId);
+  return{
+    client:$('pv-client').value.trim(),representant:$('pv-representant').value.trim(),
+    qualite:$('pv-qualite').value.trim(),emailClient:$('pv-email-client').value.trim(),
+    dateReception:$('pv-date').value,chantier:$('pv-chantier').value.trim(),
+    adresse:$('pv-adresse').value.trim(),entrepriseId:entId,entrepriseNom:ent?.nom||'',
+    techNom:$('pv-tech').value.trim(),refDevis:$('pv-ref-devis').value.trim(),
+    os:$('pv-os').value.trim(),travaux:$('pv-travaux').value.trim(),
+    typeToiture:$('pv-type-toiture').value,score:$('pv-score').value,
+    ageToiture:$('pv-age').value.trim(),dureeVieRestante:$('pv-duree-vie').value.trim(),
+    zonesCouvertes:$('pv-zones-couvertes').value.trim(),
+    zonesExclues:$('pv-zones-exclues').value.trim(),
+    clause:$('pv-clause').value.trim(),
+    observations:$('pv-observations').value.trim(),
+    garantieFab:$('pv-garantie-fab').value.trim(),
+    visiteDelaiMois:parseInt($('pv-visite-delai').value)||12,
+    dateVisiteRecommandee:$('pv-date-visite').value,
+    entretienPrestations:$('pv-entretien-prestations').value.trim(),
+    entretienPrix:$('pv-entretien-prix').value,
+    entretienFreq:$('pv-entretien-freq').value,
+    reserves:pvReserves.map(r=>({...r})),materiaux:pvMateriaux.map(m=>({...m})),
+    surveillance:pvSurveillance.map(z=>({...z})),
+    photos:pvPhotos,sigClient:getSig('client'),sigTech:getSig('tech'),
+  };
+}
+
+function saveDraft(){
+  const data=collectFormData();
+  if(!data.client){toast('Nom du client requis','err');return;}
+  if(!DB.pvReceptions)DB.pvReceptions=[];
+  if(editingPVId){
+    const idx=DB.pvReceptions.findIndex(p=>p.id===editingPVId);
+    if(idx>=0)Object.assign(DB.pvReceptions[idx],{...data,statut:'brouillon'});
+  }else{
+    const id='PV'+Date.now();editingPVId=id;
+    DB.pvReceptions.push({id,numPV:genNumPV(),...data,statut:'brouillon',createdAt:new Date().toISOString()});
+  }
+  saveDB();toast('✓ Brouillon sauvegardé');
+}
+
+async function sendLienClient(){
+  const data=collectFormData();
+  if(!data.emailClient){toast('Email client requis pour l\'envoi','err');return;}
+  if(!editingPVId){saveDraft();}
+  const pv=(DB.pvReceptions||[]).find(p=>p.id===editingPVId);
+  if(!pv?.lienPV){toast('Générez d\'abord le PV pour obtenir un lien','warn');return;}
+  try{
+    await spGetToken();
+    const base='https://graph.microsoft.com/v1.0';
+    const ent=(DB.entreprises||[]).find(e=>e.id===data.entrepriseId)||{};
+    await graphCall('POST',`${base}/me/sendMail`,{message:{
+      subject:`[${ent.nom||'HEXA'}] Procès-verbal de réception — ${data.chantier||data.client}`,
+      body:{contentType:'HTML',content:`<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+        <div style="background:#12161c;padding:20px 24px;border-radius:12px 12px 0 0;">
+          <div style="color:#2abbda;font-size:17px;font-weight:700;">${ent.nom||'HEXA'} — PV de réception</div>
+        </div>
+        <div style="border:1px solid #e0e8ec;border-top:none;border-radius:0 0 12px 12px;padding:24px;">
+          <p>Bonjour ${data.representant||''},</p>
+          <p>Veuillez trouver ci-dessous le lien vers votre procès-verbal de réception de travaux.</p>
+          <div style="background:#f8fafc;border-radius:10px;padding:16px;margin:16px 0;">
+            <div style="font-weight:700;margin-bottom:4px;">${data.chantier||data.client}</div>
+            <div style="font-size:13px;color:#3d4a56;">📍 ${data.adresse||'—'}</div>
+            <div style="font-size:13px;color:#3d4a56;">📅 Date de réception : ${fmtD(data.dateReception)}</div>
+            <div style="font-size:13px;color:#3d4a56;">Réf. : ${pv.numPV}</div>
+          </div>
+          <p><a href="${pv.lienPV}" style="background:#2abbda;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block;">📋 Consulter le PV en ligne</a></p>
+          <p style="font-size:12px;color:#aab8c0;margin-top:20px;">${ent.nom||'Groupe BCNC'} · ${ent.adresse||''}</p>
+        </div>
+      </div>`},
+      toRecipients:[{emailAddress:{address:data.emailClient,name:data.representant||data.client}}]
+    }});
+    toast('✓ Lien envoyé à '+data.emailClient);
+  }catch(e){toast('Erreur envoi : '+e.message,'err');}
+}
+
+async function genererPV(){
+  const data=collectFormData();
+  if(!data.client){$('form-err').innerHTML='<div style="color:#e04444;font-size:12px;padding:8px;">Nom du client requis</div>';return;}
+  toast('⏳ Génération du PV...');
+  if(!DB.pvReceptions)DB.pvReceptions=[];
+  let pvId=editingPVId,numPV='';
+  if(pvId){
+    const idx=DB.pvReceptions.findIndex(p=>p.id===pvId);
+    if(idx>=0){Object.assign(DB.pvReceptions[idx],{...data,statut:'signe',signedAt:new Date().toISOString()});numPV=DB.pvReceptions[idx].numPV;}
+  }else{
+    pvId='PV'+Date.now();numPV=genNumPV();editingPVId=pvId;
+    DB.pvReceptions.push({id:pvId,numPV,...data,statut:'signe',createdAt:new Date().toISOString(),signedAt:new Date().toISOString()});
+  }
+  const ent=(DB.entreprises||[]).find(e=>e.id===data.entrepriseId)||{};
+  const htmlPV=buildPVHTML({id:pvId,numPV,...data},ent);
+  // Archive SP
+  try{await uploadPVToSP(pvId,numPV,ent,htmlPV,data);toast('✓ Archivé sur SharePoint');}catch(e){toast('⚠ SP : '+e.message,'warn');}
+  // GitHub
+  try{
+    const ghToken=DB.githubToken||localStorage.getItem('hexa_gh_token')||'';
+    if(ghToken){
+      const fn=numPV+'.html';
+      const b64=btoa(unescape(encodeURIComponent(htmlPV)));
+      const url=`https://api.github.com/repos/bannequin/hexa/contents/reports/${fn}`;
+      let sha='';try{const ex=await fetch(url,{headers:{'Authorization':'token '+ghToken}});if(ex.ok){const j=await ex.json();sha=j.sha||'';}}catch(e){}
+      await fetch(url,{method:'PUT',headers:{'Authorization':'token '+ghToken,'Content-Type':'application/json'},body:JSON.stringify({message:`PV ${numPV}`,content:b64,...(sha?{sha}:{})})});
+      const lien=`https://bannequin.github.io/hexa/reports/${fn}`;
+      const idx=DB.pvReceptions.findIndex(p=>p.id===pvId);
+      if(idx>=0)DB.pvReceptions[idx].lienPV=lien;
+      toast('✓ Publié : '+lien);
+    }
+  }catch(e){toast('⚠ GitHub : '+e.message,'warn');}
+  saveDB();
+  toast('✓ PV généré et archivé !',4000);
+  setTimeout(()=>showList(),1800);
+}
+
+async function uploadPVToSP(pvId,numPV,ent,html,data){
+  if(!spSiteId)return;
+  await spGetToken();
+  const base='https://graph.microsoft.com/v1.0';
+  const nom=(ent.nom||'HEXA').replace(/[^a-zA-Z0-9\-_]/gi,'_');
+  const folder=`rapports/${nom}/PV/${numPV}`;
+  await fetch(`${base}/sites/${spSiteId}/drive/root:/${folder}/pv.html:/content`,{method:'PUT',headers:{'Authorization':'Bearer '+spToken,'Content-Type':'text/html'},body:html});
+  const jsonClean={...data,photos:[],sigClient:'',sigTech:''};
+  await fetch(`${base}/sites/${spSiteId}/drive/root:/${folder}/pv.json:/content`,{method:'PUT',headers:{'Authorization':'Bearer '+spToken,'Content-Type':'application/json'},body:JSON.stringify(jsonClean,null,2)});
+  let n=0;
+  for(const p of (data.photos||[])){try{const blob=await(await fetch(p)).blob();await fetch(`${base}/sites/${spSiteId}/drive/root:/${folder}/photos/photo_${++n}.jpg:/content`,{method:'PUT',headers:{'Authorization':'Bearer '+spToken,'Content-Type':'image/jpeg'},body:blob});}catch(e){}}
+}
+
+// ── GÉNÉRATION HTML ────────────────────────────────────────────────────────────
+function buildPVHTML(pv,ent){
+  const couleur=ent.couleur||'#2abbda';
+  const logoHtml=ent.logo?`<img src="${ent.logo}" style="height:50px;object-fit:contain;max-width:150px;" alt="${ent.nom}">`:`<div style="font-size:18px;font-weight:800;color:${couleur};letter-spacing:-.5px;">${ent.nom||'HEXA'}</div>`;
+  const tampSVG=buildTamponSVG(ent,200,100);
+  const scoreColor=pv.score==='bon'?'#2a9d6f':pv.score==='moyen'?'#c47d0a':'#e04444';
+  const scoreTxt=pv.score==='bon'?'🟢 Bon état':pv.score==='moyen'?'🟡 État moyen':'🔴 État dégradé';
+  const emailCom=ent.emailCom||ent.directeur?.email||'';
+  const devisUrl=emailCom?`mailto:${emailCom}?subject=Demande de devis entretien — ${pv.chantier||pv.client}&body=Bonjour,%0A%0ASuite au PV de réception ${pv.numPV},%0Anous souhaiterions recevoir un devis pour un contrat d'entretien annuel.%0A%0AMerci.`:'#';
+
+  const photosHTML=(pv.photos||[]).map(p=>`<div style="flex:0 0 calc(33% - 6px);aspect-ratio:4/3;border-radius:8px;overflow:hidden;"><img src="${p}" style="width:100%;height:100%;object-fit:cover;"></div>`).join('');
+  const matsHTML=(pv.materiaux||[]).filter(m=>m.nom).map(m=>`<tr style="border-bottom:1px solid #f0f4f7;"><td style="padding:8px 12px;font-size:13px;">${m.nom}</td><td style="padding:8px 12px;font-size:12px;color:#7a8d97;">${m.ref||'—'}</td><td style="padding:8px 12px;font-size:12px;color:#7a8d97;">${m.certif||'—'}</td></tr>`).join('');
+  const rsvHTML=(pv.reserves||[]).filter(r=>r.description).map((r,i)=>`<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #f5f6f8;"><div style="width:24px;height:24px;border-radius:6px;background:#fff7e6;color:#c47d0a;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #f5d98a;">${i+1}</div><div style="flex:1;"><div style="font-size:13px;color:#12161c;line-height:1.5;">${r.description}</div>${r.delai?`<div style="font-size:11px;color:#7a8d97;margin-top:3px;">Délai de levée : ${fmtD(r.delai)}</div>`:''}</div><div style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:#fff7e6;color:#854f0b;white-space:nowrap;">En attente</div></div>`).join('');
+  const survHTML=(pv.surveillance||[]).filter(z=>z.zone).map(z=>{
+    const urg=z.urgence==='urgent'?{bg:'#fff5f5',c:'#e04444',txt:'⚡ Urgent < 1 an'}:z.urgence==='moyen'?{bg:'#fff7e6',c:'#c47d0a',txt:'⏳ < 2 ans'}:{bg:'#f8fafc',c:'#7a8d97',txt:'👁 À surveiller'};
+    return`<div style="background:#fff;border:1px solid #e3e8ec;border-radius:10px;padding:14px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
+        <div style="font-size:14px;font-weight:600;color:#12161c;">${z.zone}</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${z.budget?`<div style="font-size:12px;font-weight:600;color:#c47d0a;background:#fff7e6;padding:2px 10px;border-radius:20px;">~${z.budget} €</div>`:''}
+          <div style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;background:${urg.bg};color:${urg.c};">${urg.txt}</div>
+        </div>
+      </div>
+      ${z.description?`<div style="font-size:12px;color:#3d4a56;line-height:1.6;">${z.description}</div>`:''}
+    </div>`;}).join('');
+
+  return`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PV de réception — ${pv.client}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'DM Sans',sans-serif;background:#f5f6f8;color:#12161c;-webkit-font-smoothing:antialiased;}.page{max-width:800px;margin:0 auto;padding:24px 16px 60px;}.card{background:#fff;border-radius:14px;border:1px solid #e3e8ec;overflow:hidden;margin-bottom:16px;}.sec{padding:16px 22px;border-bottom:1px solid #f0f4f7;}.sec:last-child{border-bottom:none;}.sec-hdr{padding:10px 18px;background:#f8fafc;border-bottom:1px solid #e3e8ec;display:flex;align-items:center;gap:8px;}.sec-num{width:26px;height:26px;border-radius:8px;background:#12161c;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;flex-shrink:0;}.sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7a8d97;}.lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#aab8c0;margin-bottom:4px;}.val{font-size:14px;color:#12161c;font-weight:500;}.no-print{}.@media print{body{background:#fff;}.page{max-width:none;padding:10px;}.no-print{display:none;}}</style>
+</head><body>
+<div class="page">
+
+<div class="no-print" style="text-align:right;margin-bottom:16px;">
+  <button onclick="window.print()" style="background:#12161c;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;margin-right:8px;">🖨 Imprimer / PDF</button>
+</div>
+
+<!-- COUVERTURE -->
+<div class="card">
+  <div style="background:#12161c;padding:0;display:grid;grid-template-columns:5px 1fr;">
+    <div style="background:linear-gradient(180deg,${couleur},#6c5ce7);"></div>
+    <div style="padding:28px 28px 24px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;">
+        <div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 16px;">${logoHtml}</div>
+        <div style="text-align:right;">
+          ${pv.os?`<div style="font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Votre N° de demande</div><div style="font-size:20px;font-weight:700;color:#6c5ce7;font-family:'Space Grotesk',sans-serif;">${pv.os}</div>`:''}
+          <div style="font-size:9px;color:rgba(255,255,255,.25);margin-top:4px;">Réf. ${pv.numPV}</div>
+        </div>
+      </div>
+      <div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:8px;">Document officiel</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:30px;font-weight:800;color:#fff;line-height:1.1;letter-spacing:-1px;margin-bottom:18px;">Procès-verbal<br>de <span style="color:${couleur};">réception</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden;">
+        <div style="background:#1a2030;padding:12px 16px;"><div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Client</div><div style="font-size:15px;font-weight:600;color:#fff;">${pv.client}</div><div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">${pv.representant?pv.representant+(pv.qualite?' · '+pv.qualite:''):pv.qualite||''}</div></div>
+        <div style="background:#1a2030;padding:12px 16px;"><div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Chantier</div><div style="font-size:15px;font-weight:600;color:#fff;">${pv.chantier||pv.adresse||'—'}</div><div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">${pv.adresse||''}</div></div>
+        <div style="background:#1a2030;padding:12px 16px;border-top:1px solid rgba(255,255,255,.06);"><div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Date de réception</div><div style="font-size:18px;font-weight:700;color:#fff;">${fmtD(pv.dateReception)}</div><div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px;">Point de départ des garanties légales</div></div>
+        <div style="background:#1a2030;padding:12px 16px;border-top:1px solid rgba(255,255,255,.06);"><div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Entreprise</div><div style="font-size:15px;font-weight:600;color:#fff;">${ent.nom||'—'}</div><div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">${pv.techNom||''}</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRAVAUX + MATÉRIAUX -->
+<div class="card">
+  <div class="sec-hdr"><div class="sec-num">1</div><div class="sec-title">Travaux réalisés</div></div>
+  <div class="sec">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
+      <div><div class="lbl">Type</div><div class="val">${pv.typeToiture||'—'}</div></div>
+      <div><div class="lbl">Surface</div><div class="val">${pv.surface?pv.surface+' m²':'—'}</div></div>
+      <div><div class="lbl">Réf. devis / marché</div><div class="val">${pv.refDevis||'—'}</div></div>
+      <div><div class="lbl">État à réception</div><div style="font-size:13px;font-weight:500;color:${scoreColor};">${scoreTxt}</div></div>
+    </div>
+    <div style="background:#f8fafc;border-left:3px solid #12161c;border-radius:0 8px 8px 0;padding:12px 16px;font-size:13px;color:#3d4a56;line-height:1.7;">${pv.travaux||'—'}</div>
+    ${pv.observations?`<div style="margin-top:10px;font-size:12px;color:#7a8d97;line-height:1.6;"><strong style="color:#12161c;">Observations :</strong> ${pv.observations}</div>`:''}
+  </div>
+  ${matsHTML?`<div class="sec-hdr"><div class="sec-num" style="background:#6c5ce7;"> </div><div class="sec-title">Matériaux et produits posés</div></div>
+  <div class="sec" style="padding:0;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f8fafc;"><th style="text-align:left;padding:8px 12px;font-size:10px;color:#7a8d97;font-weight:700;letter-spacing:.8px;">PRODUIT</th><th style="text-align:left;padding:8px 12px;font-size:10px;color:#7a8d97;font-weight:700;letter-spacing:.8px;">RÉFÉRENCE</th><th style="text-align:left;padding:8px 12px;font-size:10px;color:#7a8d97;font-weight:700;letter-spacing:.8px;">CERTIFICATION</th></tr></thead><tbody>${matsHTML}</tbody></table></div>`:''}
+</div>
+
+<!-- PHOTOS -->
+${photosHTML?`<div class="card"><div class="sec-hdr"><div class="sec-num">2</div><div class="sec-title">Photos de réalisation</div></div><div style="display:flex;flex-wrap:wrap;gap:8px;padding:14px 18px;">${photosHTML}</div></div>`:''}
+
+<!-- PÉRIMÈTRE LÉGAL -->
+<div class="card">
+  <div class="sec-hdr"><div class="sec-num">3</div><div class="sec-title">Périmètre des travaux · Protection juridique</div></div>
+  ${pv.zonesCouvertes?`<div class="sec"><div class="lbl">Zones couvertes par les garanties</div><div style="font-size:13px;color:#3d4a56;line-height:1.6;margin-top:4px;padding:10px 14px;background:#eaf7f1;border-radius:8px;border-left:3px solid #2a9d6f;">${pv.zonesCouvertes}</div></div>`:''}
+  ${pv.zonesExclues?`<div class="sec"><div class="lbl">⚠️ Zones exclues de la garantie</div><div style="font-size:13px;color:#3d4a56;line-height:1.6;margin-top:4px;padding:10px 14px;background:#fff5f5;border-radius:8px;border-left:3px solid #e04444;">${pv.zonesExclues}</div></div>`:''}
+  <div class="sec"><div class="lbl">Clause légale</div><div style="font-size:12px;color:#7a8d97;line-height:1.7;margin-top:4px;font-style:italic;">${pv.clause||''}</div></div>
+</div>
+
+<!-- RÉSERVES -->
+<div class="card">
+  <div class="sec-hdr"><div class="sec-num">4</div><div class="sec-title">Réserves à la réception</div></div>
+  <div class="sec">
+    ${rsvHTML||'<div style="font-size:13px;color:#2a9d6f;font-weight:500;padding:6px 0;">✅ Réception sans réserve — travaux conformes à la commande</div>'}
+    ${rsvHTML?'<div style="margin-top:10px;font-size:11px;color:#7a8d97;font-style:italic;">Les réserves devront être levées aux dates indiquées au titre de la garantie de parfait achèvement (art. 1792-6 Code civil).</div>':''}
+  </div>
+</div>
+
+<!-- ZONES À SURVEILLER -->
+${survHTML?`<div class="card">
+  <div class="sec-hdr"><div class="sec-num" style="background:#c47d0a;">!</div><div class="sec-title">Zones à surveiller — hors périmètre du marché</div></div>
+  <div class="sec">
+    <div style="font-size:12px;color:#7a8d97;margin-bottom:12px;line-height:1.6;">Les désordres suivants ont été identifiés lors de l'intervention mais ne font pas partie du présent marché. Ils sont signalés à titre informatif et de vigilance.</div>
+    ${survHTML}
+  </div>
+</div>`:''}
+
+<!-- GARANTIES -->
+<div class="card">
+  <div class="sec-hdr"><div class="sec-num">5</div><div class="sec-title">Garanties applicables</div></div>
+  <div class="sec">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+      <div style="background:#eaf7f1;border:1px solid #a8dfc5;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:11px;font-weight:600;color:#1a5740;">Parfait achèvement</div><div style="font-size:26px;font-weight:800;color:#2a9d6f;margin:4px 0;font-family:'Space Grotesk',sans-serif;">1</div><div style="font-size:10px;color:#1a5740;font-weight:600;">${pv.dateReception?`→ ${addY(pv.dateReception,1)}`:'—'}</div></div>
+      <div style="background:#eaf7f1;border:1px solid #a8dfc5;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:11px;font-weight:600;color:#1a5740;">Garantie biennale</div><div style="font-size:26px;font-weight:800;color:#2a9d6f;margin:4px 0;font-family:'Space Grotesk',sans-serif;">2</div><div style="font-size:10px;color:#1a5740;font-weight:600;">${pv.dateReception?`→ ${addY(pv.dateReception,2)}`:'—'}</div></div>
+      <div style="background:#eaf7f1;border:1px solid #a8dfc5;border-radius:10px;padding:14px;text-align:center;"><div style="font-size:11px;font-weight:600;color:#1a5740;">Garantie décennale</div><div style="font-size:26px;font-weight:800;color:#2a9d6f;margin:4px 0;font-family:'Space Grotesk',sans-serif;">10</div><div style="font-size:10px;color:#1a5740;font-weight:600;">${pv.dateReception?`→ ${addY(pv.dateReception,10)}`:'—'}</div></div>
+    </div>
+    ${pv.garantieFab?`<div style="margin-top:10px;background:#f0eeff;border:1px solid #c4b8f8;border-radius:8px;padding:10px 14px;font-size:12px;color:#4a3ea8;"><strong>Garantie fabricant :</strong> ${pv.garantieFab}</div>`:''}
+    <div style="margin-top:10px;font-size:11px;color:#aab8c0;line-height:1.6;">La signature du présent PV déclenche les garanties légales (art. 1792 et 1792-6 Code civil) et marque le transfert de responsabilité de l'ouvrage.</div>
+  </div>
+</div>
+
+<!-- CONTRAT D'ENTRETIEN -->
+<div class="card" style="border:1.5px solid #b3eaf4;">
+  <div class="sec-hdr" style="background:#eaf9fc;border-color:#b3eaf4;"><div class="sec-num" style="background:#2abbda;">🔄</div><div class="sec-title" style="color:#085670;">Proposition de contrat d'entretien</div></div>
+  <div class="sec">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:14px;font-weight:600;color:#12161c;margin-bottom:8px;">Contrat d'entretien annuel — ${ent.nom||'Alptech'}</div>
+        <div style="font-size:13px;color:#3d4a56;line-height:1.7;">${pv.entretienPrestations||'Visite annuelle de contrôle · Nettoyage EP · Vérification points singuliers · Rapport écrit'}</div>
+        <div style="margin-top:10px;font-size:12px;color:#7a8d97;">📅 Visite de contrôle recommandée : <strong style="color:#12161c;">${pv.dateVisiteRecommandee||'—'}</strong></div>
+        <div style="font-size:12px;color:#7a8d97;margin-top:3px;">Fréquence : ${pv.entretienFreq||'Annuelle'}</div>
+      </div>
+      <div style="text-align:center;background:#eaf9fc;border:1.5px solid #b3eaf4;border-radius:14px;padding:20px 24px;min-width:160px;">
+        <div style="font-size:11px;color:#085670;margin-bottom:4px;text-transform:uppercase;letter-spacing:.8px;">Estimation</div>
+        <div style="font-size:32px;font-weight:800;color:#2abbda;font-family:'Space Grotesk',sans-serif;line-height:1;">${pv.entretienPrix?pv.entretienPrix+' €':'Sur devis'}</div>
+        <div style="font-size:11px;color:#7a8d97;margin-top:3px;">HT / an</div>
+        ${emailCom?`<a href="${devisUrl}" style="display:block;margin-top:12px;background:#2abbda;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700;">Demander un devis</a>`:''}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SIGNATURES -->
+<div class="card">
+  <div class="sec-hdr"><div class="sec-num">6</div><div class="sec-title">Signatures</div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;">
+    <div style="padding:20px 22px;border-right:1px solid #f0f4f7;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#aab8c0;margin-bottom:5px;">Signature client</div>
+      <div style="font-size:13px;font-weight:500;color:#12161c;margin-bottom:4px;">${pv.representant||pv.client||'—'}</div>
+      <div style="font-size:11px;color:#7a8d97;margin-bottom:12px;">${pv.qualite||''}</div>
+      <div style="border:1px solid #e3e8ec;border-radius:10px;overflow:hidden;min-height:100px;">${pv.sigClient?`<img src="${pv.sigClient}" style="width:100%;height:100px;object-fit:contain;">`:''}</div>
+      <div style="margin-top:8px;font-size:11px;color:#aab8c0;">Fait à ${pv.adresse?.split(',').pop()?.trim()||'—'}, le ${fmtD(pv.dateReception)}</div>
+    </div>
+    <div style="padding:20px 22px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#aab8c0;margin-bottom:5px;">Cachet et signature entreprise</div>
+      <div style="font-size:13px;font-weight:500;color:#12161c;margin-bottom:4px;">${pv.techNom||'—'}</div>
+      <div style="font-size:11px;color:#7a8d97;margin-bottom:12px;">${ent.nom||'—'}</div>
+      <div style="position:relative;border:1px solid #e3e8ec;border-radius:10px;overflow:hidden;min-height:100px;display:flex;align-items:center;justify-content:center;">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:.9;">${tampSVG}</div>
+        ${pv.sigTech?`<img src="${pv.sigTech}" style="position:relative;z-index:1;width:100%;height:100px;object-fit:contain;">`:''} 
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#aab8c0;">Établi en 2 exemplaires · ${pv.numPV}</div>
+    </div>
+  </div>
+</div>
+
+</div></body></html>`;
+}
+
+// INIT
+window.addEventListener('load',async()=>{
+  msalInstance=new msal.PublicClientApplication({auth:{clientId:SP_CONFIG.clientId,authority:SP_CONFIG.authority,redirectUri:SP_CONFIG.redirectUri},cache:{cacheLocation:'sessionStorage',storeAuthStateInCookie:false}});
+  try{
+    const resp=await msalInstance.handleRedirectPromise();
+    if(resp){spAccount=resp.account;await onSignedIn();return;}
+    const accounts=msalInstance.getAllAccounts();
+    if(accounts.length>0){spAccount=accounts[0];await onSignedIn();return;}
+  }catch(e){console.error(e);}
+  $('login-msg').textContent='';
+});
+</script>
+</body>
+</html>
