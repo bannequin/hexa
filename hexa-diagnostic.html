@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>HEXA Diagnostic — Groupe BCNC</title>
+<script src="https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js" crossorigin="anonymous"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600;1,700&family=DM+Sans:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --ink:#0f1923;--slate:#1e3448;--stone:#3d5a6e;--mist:#7a9bb0;--fog:#b0c4d0;
+  --pearl:#e4edf3;--parchment:#f4efe9;--paper:#f9f8f6;--white:#fff;
+  --copper:#c47030;--copper-l:#f5e8d8;--copper-m:#e8c090;
+  --amber:#c48a10;--amber-l:#fdf0d0;
+  --sage:#2a8060;--sage-l:#dff0e8;
+  --clay:#b03838;--clay-l:#faeaea;
+  --sky:#1a7aaa;--sky-l:#ddf0fa;
+  --pur:#5848c8;--pur-l:#eeeaff;
+  --gold:#c8a832;--gold-l:#fdf8e0;
+  --serif:"Playfair Display",Georgia,serif;
+  --sans:"DM Sans",system-ui,sans-serif;
+  --mono:"Space Grotesk",monospace;
+  --r:14px;--shadow:0 1px 4px rgba(15,25,35,.06),0 6px 24px rgba(15,25,35,.07);
+  --shadow-lg:0 4px 12px rgba(15,25,35,.08),0 20px 60px rgba(15,25,35,.12);
+}
+body{font-family:var(--sans);background:var(--parchment);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes barGrow{from{width:0}to{width:var(--w)}}
+@keyframes ringFill{from{stroke-dashoffset:251.3}to{stroke-dashoffset:var(--off)}}
+@keyframes countUp{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+.rise{animation:rise .6s cubic-bezier(.22,.68,0,1.1) both;}
+.d1{animation-delay:.04s}.d2{animation-delay:.1s}.d3{animation-delay:.17s}.d4{animation-delay:.24s}
+.d5{animation-delay:.31s}.d6{animation-delay:.38s}.d7{animation-delay:.46s}.d8{animation-delay:.54s}
+@media print{.no-print{display:none!important;}body{background:#fff;}.page{padding:0;max-width:none;}}
+
+/* ═══ LOGIN ═══ */
+#login-screen{position:fixed;inset:0;background:linear-gradient(135deg,var(--slate) 0%,var(--ink) 100%);z-index:500;display:flex;align-items:center;justify-content:center;flex-direction:column;}
+#login-screen::before{content:"";position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");}
+.login-card{background:rgba(255,255,255,.06);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:48px 40px;text-align:center;width:min(420px,90vw);position:relative;}
+.login-logo-wrap{margin-bottom:28px;}
+.login-logo-hexa{font-family:var(--serif);font-size:32px;font-weight:800;color:#fff;letter-spacing:-1px;}
+.login-logo-hexa span{color:var(--copper-m);font-style:italic;}
+.login-sub{font-size:12px;color:rgba(255,255,255,.35);letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+.login-title{font-family:var(--serif);font-size:22px;color:rgba(255,255,255,.85);margin-bottom:8px;}
+.login-desc{font-size:13px;color:rgba(255,255,255,.4);line-height:1.6;margin-bottom:32px;}
+.login-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#fff;color:var(--ink);border:none;border-radius:12px;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;}
+.login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.3);}
+.login-msg{font-size:12px;color:rgba(255,255,255,.4);margin-top:16px;}
+.login-err{font-size:12px;color:#f09090;margin-top:10px;display:none;}
+
+/* ═══ APP ═══ */
+#app-screen{display:none;min-height:100vh;}
+
+/* ═══ TOPBAR ═══ */
+.topbar{background:var(--white);border-bottom:1px solid var(--pearl);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(15,25,35,.06);}
+.tb-left{display:flex;align-items:center;gap:14px;}
+.tb-logo{font-family:var(--serif);font-size:18px;font-weight:700;color:var(--ink);}
+.tb-logo span{color:var(--copper);font-style:italic;}
+.tb-sep{width:1px;height:16px;background:var(--fog);}
+.tb-module{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--mist);}
+.tb-right{display:flex;align-items:center;gap:10px;}
+.tb-home{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:var(--stone);text-decoration:none;padding:6px 12px;border-radius:8px;transition:all .15s;}
+.tb-home:hover{background:var(--pearl);color:var(--ink);}
+.tb-user{font-size:11px;color:var(--mist);}
+.tb-avatar{width:30px;height:30px;border-radius:50%;background:var(--copper);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;cursor:pointer;}
+.tb-mode-toggle{display:flex;background:var(--paper);border:1px solid var(--pearl);border-radius:10px;padding:3px;gap:3px;}
+.tb-mode-btn{font-size:11px;font-weight:600;padding:5px 14px;border-radius:7px;border:none;cursor:pointer;transition:all .18s;color:var(--mist);background:transparent;}
+.tb-mode-btn.active{background:var(--white);color:var(--ink);box-shadow:0 1px 4px rgba(15,25,35,.1);}
+
+/* ═══ MAIN LAYOUT ═══ */
+.page{max-width:900px;margin:0 auto;padding:32px 20px 80px;}
+
+/* ═══ DROP ZONE ═══ */
+.drop-zone{border:2px dashed var(--fog);border-radius:16px;padding:40px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--white);margin-bottom:24px;position:relative;}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--copper);background:var(--copper-l);}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.dz-icon{font-size:40px;margin-bottom:12px;}
+.dz-title{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink);margin-bottom:6px;}
+.dz-sub{font-size:13px;color:var(--mist);line-height:1.6;}
+.dz-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--copper);border:1px solid var(--copper-m);padding:3px 10px;border-radius:20px;margin-top:12px;}
+
+/* ═══ SPINNER ═══ */
+.spinner{display:none;flex-direction:column;align-items:center;gap:16px;padding:40px;}
+.spin-ring{width:48px;height:48px;border:3px solid var(--pearl);border-top-color:var(--copper);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin-label{font-size:13px;color:var(--mist);}
+
+/* ═══ COVER / HERO ═══ */
+.diag-cover{background:linear-gradient(145deg,var(--slate) 0%,var(--ink) 60%,#0a1520 100%);border-radius:20px;overflow:hidden;margin-bottom:20px;box-shadow:var(--shadow-lg);position:relative;}
+.cover-bg-pattern{position:absolute;inset:0;opacity:.04;background-image:repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 50%);background-size:20px 20px;}
+.cover-accent{position:absolute;top:0;right:0;width:400px;height:100%;background:radial-gradient(ellipse at 80% 30%,rgba(196,112,48,.15) 0%,transparent 60%);}
+.cover-inner{position:relative;z-index:1;padding:44px 48px 40px;}
+.cover-pill{display:inline-flex;align-items:center;gap:7px;font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15);padding:5px 14px;border-radius:20px;margin-bottom:20px;}
+.cover-pill-dot{width:6px;height:6px;border-radius:50%;background:var(--copper-m);}
+.cover-title{font-family:var(--serif);font-size:34px;font-weight:800;color:#fff;line-height:1.15;margin-bottom:8px;letter-spacing:-.5px;}
+.cover-title em{color:var(--copper-m);font-style:italic;}
+.cover-address{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:28px;letter-spacing:.3px;}
+.cover-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.cover-field{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:14px 16px;}
+.cf-lbl{font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.3);margin-bottom:5px;}
+.cf-val{font-size:12px;color:rgba(255,255,255,.78);font-weight:500;line-height:1.4;}
+.cf-val strong{color:#fff;font-weight:600;}
+.cover-nature{grid-column:span 2;background:rgba(196,112,48,.12);border:1px solid rgba(196,112,48,.25);}
+.cover-devis{background:rgba(196,112,48,.08);border:1px solid rgba(196,112,48,.2);}
+@media(max-width:600px){.cover-inner{padding:28px 22px;}.cover-title{font-size:24px;}.cover-grid{grid-template-columns:1fr 1fr;}.cover-nature{grid-column:span 2;}}
+
+/* ═══ SCORE BAND ═══ */
+.score-band{background:var(--white);border-radius:16px;box-shadow:var(--shadow);padding:24px 28px;margin-bottom:16px;display:flex;align-items:center;gap:24px;}
+.ring-wrap{position:relative;width:88px;height:88px;flex-shrink:0;}
+.ring-wrap svg{transform:rotate(-90deg);}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.ring-score{font-family:var(--mono);font-size:28px;font-weight:600;line-height:1;}
+.ring-denom{font-size:9px;color:var(--mist);letter-spacing:.5px;}
+.score-sep{width:1px;height:56px;background:var(--pearl);flex-shrink:0;}
+.score-body{flex:1;}
+.score-tag{font-family:var(--serif);font-size:18px;font-weight:600;margin-bottom:5px;font-style:italic;}
+.score-desc{font-size:12px;color:var(--stone);line-height:1.65;margin-bottom:10px;}
+.score-chips{display:flex;gap:7px;flex-wrap:wrap;}
+.chip{font-size:9px;font-weight:600;padding:3px 10px;border-radius:20px;letter-spacing:.4px;}
+.chip-red{background:var(--clay-l);color:var(--clay);border:1px solid #f0b0b0;}
+.chip-amb{background:var(--amber-l);color:var(--amber);border:1px solid var(--copper-m);}
+.chip-grn{background:var(--sage-l);color:var(--sage);border:1px solid #a0d8c0;}
+
+/* ═══ SECTION DIVIDER ═══ */
+.sec-div{display:flex;align-items:center;gap:14px;margin:28px 0 14px;}
+.sec-line{flex:1;height:1px;background:var(--pearl);}
+.sec-label{font-size:8px;letter-spacing:2.5px;text-transform:uppercase;color:var(--mist);white-space:nowrap;font-weight:500;}
+
+/* ═══ SYNTHÈSE ═══ */
+.synth-card{background:var(--white);border-radius:16px;box-shadow:var(--shadow);padding:28px 32px;margin-bottom:16px;position:relative;overflow:hidden;}
+.synth-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--copper),var(--sky));}
+.synth-quote{font-family:var(--serif);font-size:44px;color:var(--copper);line-height:.55;float:left;margin-right:10px;margin-top:10px;font-style:italic;}
+.synth-text{font-family:var(--serif);font-size:14px;color:var(--slate);line-height:1.9;font-style:italic;}
+
+/* ═══ INVESTISSEMENT ANNUEL — la section phare ═══ */
+.invest-card{background:linear-gradient(145deg,var(--slate) 0%,#1a2a3a 100%);border-radius:20px;padding:32px 36px;margin-bottom:16px;box-shadow:var(--shadow-lg);position:relative;overflow:hidden;}
+.invest-card::after{content:"";position:absolute;bottom:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:rgba(196,112,48,.08);}
+.invest-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px;}
+.invest-title{font-family:var(--serif);font-size:20px;font-weight:700;color:#fff;margin-bottom:4px;font-style:italic;}
+.invest-sub{font-size:11px;color:rgba(255,255,255,.3);letter-spacing:.5px;}
+.invest-total-badge{background:rgba(196,112,48,.15);border:1px solid rgba(196,112,48,.3);border-radius:12px;padding:12px 20px;text-align:center;}
+.invest-total-lbl{font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.3);}
+.invest-total-val{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--copper-m);}
+.invest-total-ttc{font-size:10px;color:rgba(255,255,255,.3);margin-top:2px;}
+/* Graphique à barres horizontales par année */
+.year-bars{margin-bottom:28px;}
+.year-row{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
+.year-label{font-family:var(--mono);font-size:12px;font-weight:600;color:rgba(255,255,255,.5);width:36px;flex-shrink:0;}
+.year-bar-wrap{flex:1;position:relative;}
+.year-bar-track{background:rgba(255,255,255,.06);border-radius:4px;height:28px;overflow:hidden;}
+.year-bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 12px;transition:width 1.4s cubic-bezier(.22,.68,0,1.1);}
+.year-bar-label{font-size:11px;font-weight:600;color:#fff;white-space:nowrap;}
+.year-bar-amt{font-family:var(--mono);font-size:12px;font-weight:600;color:rgba(255,255,255,.6);width:80px;text-align:right;flex-shrink:0;}
+/* Répartition par poste sous le graphique */
+.posts-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;position:relative;z-index:1;}
+.post-item{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 12px;}
+.post-name{font-size:10px;color:rgba(255,255,255,.4);margin-bottom:4px;line-height:1.4;}
+.post-amt{font-family:var(--mono);font-size:13px;font-weight:600;color:rgba(255,255,255,.8);}
+.post-pct{font-size:9px;color:rgba(255,255,255,.25);margin-top:2px;}
+.post-bar{height:2px;background:rgba(255,255,255,.06);border-radius:1px;margin-top:6px;overflow:hidden;}
+.post-bar-fill{height:100%;border-radius:1px;background:var(--copper-m);opacity:.6;}
+@media(max-width:600px){.posts-grid{grid-template-columns:1fr 1fr;}.invest-card{padding:22px 18px;}}
+
+/* ═══ ZONES ═══ */
+.zone-card{background:var(--white);border-radius:16px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden;}
+.zone-header{display:flex;align-items:stretch;border-bottom:1px solid var(--pearl);}
+.zone-accent{width:5px;flex-shrink:0;}
+.zone-accent.critique{background:var(--clay);}
+.zone-accent.majeur{background:var(--amber);}
+.zone-accent.mineur{background:var(--sky);}
+.zone-accent.stable{background:var(--sage);}
+.zone-title-area{flex:1;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;}
+.zone-num{font-family:var(--mono);font-size:9px;color:var(--mist);font-weight:600;letter-spacing:1px;margin-bottom:3px;}
+.zone-name{font-family:var(--serif);font-size:15px;font-weight:600;color:var(--ink);}
+.zone-sev{font-size:9px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:.5px;}
+.zone-sev.critique{background:var(--clay-l);color:var(--clay);border:1px solid #f0b0b0;}
+.zone-sev.majeur{background:var(--amber-l);color:var(--amber);border:1px solid var(--copper-m);}
+.zone-sev.mineur{background:var(--sky-l);color:var(--sky);border:1px solid #9dd0ee;}
+.zone-sev.stable{background:var(--sage-l);color:var(--sage);border:1px solid #90d0b0;}
+.zone-body{padding:18px 22px;}
+.zone-text{font-size:13px;color:var(--stone);line-height:1.75;margin-bottom:12px;}
+.obs-box{background:var(--pearl);border-left:3px solid var(--sky);padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--slate);line-height:1.6;display:flex;gap:8px;border-radius:0 8px 8px 0;}
+.sol-box{background:var(--sage-l);border:1px solid #b0d8c0;border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+.sol-lbl{font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--sage);font-weight:600;margin-bottom:4px;}
+.sol-text{font-size:12px;color:#1a4830;line-height:1.5;}
+.dur-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;font-weight:500;padding:4px 12px;border-radius:20px;background:var(--parchment);color:var(--stone);border:1px solid var(--fog);}
+.photo-hint{font-size:10px;color:var(--mist);margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+.photo-compare{display:grid;grid-template-columns:1fr 1fr;border-radius:12px;overflow:hidden;border:1px solid var(--pearl);margin-bottom:14px;position:relative;}
+.photo-compare::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;background:#fff;z-index:2;}
+.photo-slot{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--pearl);}
+.photo-slot img{width:100%;height:100%;object-fit:cover;display:block;}
+.photo-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;background:var(--parchment);transition:background .2s;}
+.photo-overlay:hover{background:var(--copper-l);}
+.photo-overlay input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.po-icon{font-size:22px;opacity:.35;}
+.po-label{font-size:10px;color:var(--mist);text-align:center;padding:0 8px;}
+.photo-cap{position:absolute;bottom:0;left:0;right:0;padding:5px 10px;font-size:9px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:.7px;color:#fff;z-index:3;}
+.photo-cap.avant{background:rgba(176,56,56,.85);}
+.photo-cap.apres{background:rgba(42,128,96,.85);}
+.photo-del{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:rgba(15,25,35,.5);border:none;cursor:pointer;color:#fff;font-size:11px;z-index:4;display:none;align-items:center;justify-content:center;}
+.photo-slot:hover .photo-del{display:flex;}
+
+/* ═══ RISQUES GÉO ═══ */
+.risk-card{background:linear-gradient(145deg,#1a3a50 0%,var(--slate) 100%);border-radius:16px;padding:26px 28px;margin-bottom:16px;box-shadow:var(--shadow-lg);}
+.risk-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;}
+.risk-city{font-family:var(--serif);font-size:17px;font-weight:600;color:#fff;font-style:italic;margin-bottom:3px;}
+.risk-loc{font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.5px;}
+.risk-idx{text-align:center;}
+.risk-idx-val{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--copper-m);}
+.risk-idx-lbl{font-size:8px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;}
+.risk-items{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.ri{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;}
+.ri-ico{font-size:16px;margin-bottom:5px;}
+.ri-lbl{font-size:8px;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.ri-val{font-size:11px;color:rgba(255,255,255,.75);font-weight:500;margin-bottom:4px;line-height:1.35;}
+.ri-badge{font-size:8px;font-weight:600;padding:2px 8px;border-radius:8px;display:inline-block;letter-spacing:.4px;}
+.ri-hi{background:rgba(176,56,56,.25);color:#f09090;}
+.ri-med{background:rgba(196,138,16,.22);color:#f5c040;}
+.ri-lo{background:rgba(42,128,96,.22);color:#70d8b0;}
+.risk-note{font-size:9px;color:rgba(255,255,255,.22);margin-top:4px;line-height:1.5;}
+
+/* ═══ RECS ═══ */
+.rec-card{background:var(--white);border-radius:14px;box-shadow:var(--shadow);padding:16px 20px;margin-bottom:10px;display:flex;gap:14px;}
+.rec-num{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:600;flex-shrink:0;}
+.rec-num.p1{background:var(--clay-l);color:var(--clay);}
+.rec-num.p2{background:var(--amber-l);color:var(--amber);}
+.rec-num.p3{background:var(--sage-l);color:var(--sage);}
+.rec-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px;}
+.rec-desc{font-size:12px;color:var(--stone);line-height:1.6;margin-bottom:7px;}
+.rec-chip{font-size:9px;font-weight:600;padding:2px 10px;border-radius:20px;letter-spacing:.3px;}
+.rc-p1{background:var(--clay-l);color:var(--clay);border:1px solid #f0b0b0;}
+.rc-p2{background:var(--amber-l);color:var(--amber);border:1px solid var(--copper-m);}
+.rc-p3{background:var(--sage-l);color:var(--sage);border:1px solid #a0d8c0;}
+
+/* ═══ CERTIFICATIONS ═══ */
+.certs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+.cert-card{background:var(--white);border-radius:14px;box-shadow:var(--shadow);padding:18px 16px;text-align:center;border-top:3px solid transparent;transition:transform .2s;}
+.cert-card:hover{transform:translateY(-2px);}
+.cert-card.c1{border-color:var(--sage);}
+.cert-card.c2{border-color:var(--copper);}
+.cert-card.c3{border-color:var(--clay);}
+.cert-card.c4{border-color:var(--amber);}
+.cert-icon{font-size:26px;margin-bottom:8px;}
+.cert-name{font-family:var(--serif);font-size:14px;font-weight:700;color:var(--ink);margin-bottom:3px;}
+.cert-num{font-family:var(--mono);font-size:10px;color:var(--mist);margin-bottom:6px;}
+.cert-desc{font-size:10px;color:var(--stone);line-height:1.55;}
+@media(max-width:600px){.certs-grid{grid-template-columns:1fr 1fr;}}
+
+/* ═══ DURÉE VIE ═══ */
+.duree-card{background:linear-gradient(145deg,var(--sky) 0%,#1a3060 100%);border-radius:16px;padding:24px 28px;margin-bottom:16px;box-shadow:var(--shadow-lg);}
+.duree-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+.duree-name{font-family:var(--serif);font-size:15px;font-weight:600;color:#fff;font-style:italic;margin-bottom:3px;}
+.duree-sub{font-size:10px;color:rgba(255,255,255,.35);}
+.duree-years{font-family:var(--mono);font-size:34px;font-weight:600;color:rgba(255,255,255,.9);}
+.duree-lbl{font-size:9px;color:rgba(255,255,255,.3);text-align:right;}
+.duree-track{background:rgba(255,255,255,.12);border-radius:4px;height:8px;overflow:hidden;margin-bottom:10px;}
+.duree-fill{height:100%;background:rgba(255,255,255,.7);border-radius:4px;transition:width 1.4s .5s ease;}
+.duree-legend{display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.28);margin-bottom:12px;}
+.duree-desc{font-size:11px;color:rgba(255,255,255,.45);line-height:1.7;}
+
+/* ═══ CTA VISIONNAIRE ═══ */
+.cta-section{background:var(--white);border-radius:20px;box-shadow:var(--shadow-lg);overflow:hidden;margin-bottom:16px;}
+.cta-top{background:linear-gradient(135deg,var(--ink) 0%,var(--slate) 100%);padding:32px 36px;position:relative;overflow:hidden;}
+.cta-top::after{content:"";position:absolute;bottom:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:rgba(196,112,48,.08);}
+.cta-pill{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.12);padding:4px 12px;border-radius:20px;display:inline-block;margin-bottom:14px;}
+.cta-title{font-family:var(--serif);font-size:26px;font-weight:800;color:#fff;margin-bottom:6px;}
+.cta-sub{font-size:13px;color:rgba(255,255,255,.4);}
+.cta-bottom{padding:24px 36px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.cta-devis{font-family:var(--mono);font-size:28px;font-weight:600;color:var(--ink);}
+.cta-devis-sub{font-size:11px;color:var(--mist);margin-top:2px;}
+.cta-btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--copper) 0%,#a04828 100%);color:#fff;font-family:var(--sans);font-size:14px;font-weight:600;padding:14px 28px;border-radius:12px;border:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(196,112,48,.3);}
+.cta-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(196,112,48,.4);}
+.cta-checklist{padding:0 36px 28px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.cta-check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--stone);}
+.cta-check-icon{width:20px;height:20px;border-radius:50%;background:var(--sage-l);color:var(--sage);font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;}
+
+/* ═══ FOOTER ═══ */
+.rpt-footer{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:20px 0;border-top:1px solid var(--fog);}
+.rf-brand{font-family:var(--serif);font-size:16px;font-weight:700;color:var(--ink);}
+.rf-brand span{color:var(--copper);font-style:italic;}
+.rf-brand-sub{font-size:10px;color:var(--mist);margin-top:2px;line-height:1.6;}
+.rf-center{text-align:center;font-size:10px;color:var(--mist);line-height:1.7;}
+.rf-contact{text-align:right;font-size:10px;color:var(--stone);line-height:1.7;}
+.rf-tel{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink);}
+
+/* ═══ TOAST ═══ */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--slate);color:#fff;padding:12px 24px;border-radius:12px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.err{background:#a02020;}
+
+/* État des lieux mode */
+.etat-form{background:var(--white);border-radius:16px;box-shadow:var(--shadow);padding:24px 28px;margin-bottom:16px;}
+.etat-form .field label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--mist);display:block;margin-bottom:6px;}
+.etat-form input,.etat-form select,.etat-form textarea{width:100%;padding:10px 14px;border:1.5px solid var(--pearl);border-radius:10px;font-size:13px;font-family:var(--sans);outline:none;background:var(--paper);color:var(--ink);transition:border-color .15s;}
+.etat-form input:focus,.etat-form select:focus,.etat-form textarea:focus{border-color:var(--copper);background:#fff;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.field{margin-bottom:12px;}
+.btn-gen{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--copper) 0%,#a04828 100%);color:#fff;font-family:var(--sans);font-size:13px;font-weight:600;padding:12px 24px;border-radius:10px;border:none;cursor:pointer;transition:all .2s;}
+.btn-gen:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(196,112,48,.3);}
+.btn-sec{display:inline-flex;align-items:center;gap:8px;background:var(--white);color:var(--ink);font-family:var(--sans);font-size:13px;font-weight:600;padding:12px 24px;border-radius:10px;border:1.5px solid var(--fog);cursor:pointer;transition:all .15s;margin-right:8px;}
+.btn-sec:hover{border-color:var(--stone);background:var(--paper);}
+.add-zone-btn{display:flex;align-items:center;gap:6px;background:var(--parchment);color:var(--stone);border:1.5px dashed var(--fog);border-radius:10px;padding:10px 16px;font-size:12px;font-weight:500;cursor:pointer;width:100%;justify-content:center;margin-top:4px;transition:all .15s;}
+.add-zone-btn:hover{background:var(--pearl);border-color:var(--mist);}
+.zone-form-item{background:var(--paper);border:1px solid var(--pearl);border-radius:12px;padding:14px 16px;margin-bottom:8px;}
+.zone-form-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.zone-form-title{font-size:13px;font-weight:600;color:var(--ink);}
+.zone-del-btn{background:none;border:none;color:var(--mist);cursor:pointer;font-size:14px;padding:2px 6px;}
+.zone-del-btn:hover{color:var(--clay);}
+.sev-btns{display:flex;gap:6px;margin-bottom:10px;}
+.sev-btn{font-size:10px;font-weight:600;padding:5px 12px;border-radius:20px;border:1.5px solid var(--fog);cursor:pointer;transition:all .15s;background:#fff;}
+.sev-btn.active-critique{background:var(--clay-l);color:var(--clay);border-color:#f0b0b0;}
+.sev-btn.active-majeur{background:var(--amber-l);color:var(--amber);border-color:var(--copper-m);}
+.sev-btn.active-mineur{background:var(--sky-l);color:var(--sky);border-color:#9dd0ee;}
+.sev-btn.active-stable{background:var(--sage-l);color:var(--sage);border-color:#a0d8c0;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo-wrap">
+      <div class="login-logo-hexa">HE<span>XA</span></div>
+      <div class="login-sub">Groupe BCNC</div>
+    </div>
+    <div class="login-title">Module Diagnostic</div>
+    <div class="login-desc">Audit de patrimoine bâti · Import devis · Présentation copropriétaires</div>
+    <button class="login-btn" onclick="doLogin()">
+      <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+      Se connecter avec Microsoft 365
+    </button>
+    <div class="login-msg" id="login-msg"></div>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="tb-logo">HE<span>XA</span></div>
+      <div class="tb-sep"></div>
+      <div class="tb-module">Diagnostic</div>
+    </div>
+    <div class="tb-right">
+      <div class="tb-mode-toggle">
+        <button class="tb-mode-btn active" id="btn-mode-etat" onclick="setMode('etat')">État des lieux</button>
+        <button class="tb-mode-btn" id="btn-mode-devis" onclick="setMode('devis')">Présentation devis</button>
+      </div>
+      <a href="hexa-accueil.html" class="tb-home">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Accueil
+      </a>
+      <div class="tb-user" id="tb-user-name"></div>
+      <div class="tb-avatar" id="tb-avatar" onclick="doLogout()">?</div>
+    </div>
+  </div>
+
+  <!-- MODE: PRÉSENTATION DEVIS -->
+  <div id="view-devis" class="page">
+    <!-- DROP ZONE PDF -->
+    <div class="drop-zone rise d1" id="drop-zone">
+      <input type="file" accept="application/pdf" onchange="handlePDF(this.files[0])" id="pdf-input">
+      <div class="dz-icon">📄</div>
+      <div class="dz-title">Importez votre devis ou présentation</div>
+      <div class="dz-sub">Glissez un PDF depuis votre ERP · L'IA extrait automatiquement les postes, montants et diagnostics</div>
+      <div class="dz-badge">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+        PDF · ERP · Présentation
+      </div>
+    </div>
+
+    <!-- SPINNER IA -->
+    <div class="spinner" id="spinner">
+      <div class="spin-ring"></div>
+      <div class="spin-label" id="spin-label">Analyse du document en cours...</div>
+    </div>
+
+    <!-- RAPPORT GÉNÉRÉ -->
+    <div id="rapport-output" style="display:none;">
+
+      <!-- COVER -->
+      <div class="diag-cover rise d1">
+        <div class="cover-bg-pattern"></div>
+        <div class="cover-accent"></div>
+        <div class="cover-inner">
+          <div class="cover-pill"><div class="cover-pill-dot"></div>Rapport de diagnostic &amp; présentation · Groupe BCNC</div>
+          <div class="cover-title" id="rpt-title">Réfection de <em>Toiture</em></div>
+          <div class="cover-address" id="rpt-address">14 Rue Clot Bey — 38000 Grenoble</div>
+          <div class="cover-grid">
+            <div class="cover-field"><div class="cf-lbl">Client / Copropriété</div><div class="cf-val" id="rpt-client"><strong>—</strong></div></div>
+            <div class="cover-field"><div class="cf-lbl">Référence devis</div><div class="cf-val" id="rpt-ref"><strong>—</strong></div></div>
+            <div class="cover-field cover-devis"><div class="cf-lbl">Prestataire</div><div class="cf-val" id="rpt-prestataire">—</div></div>
+            <div class="cover-field"><div class="cf-lbl">Date</div><div class="cf-val" id="rpt-date">—</div></div>
+            <div class="cover-field cover-nature"><div class="cf-lbl">Nature des travaux</div><div class="cf-val" id="rpt-nature">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCORE -->
+      <div class="score-band rise d2">
+        <div class="ring-wrap">
+          <svg width="88" height="88" viewBox="0 0 88 88">
+            <circle cx="44" cy="44" r="40" fill="none" stroke="var(--pearl)" stroke-width="6"/>
+            <circle id="ring-circle" cx="44" cy="44" r="40" fill="none" stroke="var(--amber)" stroke-width="6" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="100" style="transition:stroke-dashoffset 1.4s .3s ease;"/>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-score" id="ring-score-val" style="color:var(--amber);">—</div>
+            <div class="ring-denom">/10</div>
+          </div>
+        </div>
+        <div class="score-sep"></div>
+        <div class="score-body">
+          <div class="score-tag" id="score-tag">—</div>
+          <div class="score-desc" id="score-desc">—</div>
+          <div class="score-chips" id="score-chips"></div>
+        </div>
+      </div>
+
+      <!-- SYNTHÈSE -->
+      <div class="sec-div rise d2"><div class="sec-line"></div><div class="sec-label">Synthèse du diagnostic</div><div class="sec-line"></div></div>
+      <div class="synth-card rise d3">
+        <span class="synth-quote">"</span>
+        <div class="synth-text" id="rpt-synthese">—</div>
+      </div>
+
+      <!-- INVESTISSEMENT ANNUEL — la pièce maîtresse -->
+      <div class="sec-div rise d3"><div class="sec-line"></div><div class="sec-label">Plan d'investissement patrimonial</div><div class="sec-line"></div></div>
+      <div class="invest-card rise d4">
+        <div class="invest-header">
+          <div>
+            <div class="invest-title">Investissement global par année</div>
+            <div class="invest-sub" id="invest-sub">Réfection complète — vision pluriannuelle</div>
+          </div>
+          <div class="invest-total-badge">
+            <div class="invest-total-lbl">Total HT</div>
+            <div class="invest-total-val" id="invest-total-ht">—</div>
+            <div class="invest-total-ttc" id="invest-total-ttc">— TTC</div>
+          </div>
+        </div>
+        <div class="year-bars" id="year-bars"><!-- généré JS --></div>
+        <div style="font-size:9px;color:rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:500;position:relative;z-index:1;">Répartition par poste</div>
+        <div class="posts-grid" id="posts-grid"><!-- généré JS --></div>
+      </div>
+
+      <!-- ZONES / DÉSORDRES -->
+      <div class="sec-div rise d4"><div class="sec-line"></div><div class="sec-label">Diagnostic par zone</div><div class="sec-line"></div></div>
+      <div id="zones-output"><!-- généré JS --></div>
+
+      <!-- RISQUES GÉO -->
+      <div class="sec-div rise d5"><div class="sec-line"></div><div class="sec-label">Analyse des risques — contexte géographique</div><div class="sec-line"></div></div>
+      <div class="risk-card rise d5">
+        <div class="risk-top">
+          <div>
+            <div class="risk-city" id="risk-city">—</div>
+            <div class="risk-loc" id="risk-loc">—</div>
+          </div>
+          <div class="risk-idx">
+            <div class="risk-idx-val" id="risk-idx-val">—</div>
+            <div class="risk-idx-lbl">Indice de risque</div>
+          </div>
+        </div>
+        <div class="risk-items" id="risk-items"><!-- généré JS --></div>
+      </div>
+
+      <!-- RECOMMANDATIONS -->
+      <div class="sec-div rise d5"><div class="sec-line"></div><div class="sec-label">Recommandations prioritaires</div><div class="sec-line"></div></div>
+      <div id="recs-output"><!-- généré JS --></div>
+
+      <!-- CERTIFICATIONS -->
+      <div class="sec-div rise d6"><div class="sec-line"></div><div class="sec-label">Garanties &amp; certifications</div><div class="sec-line"></div></div>
+      <div class="certs-grid rise d6" id="certs-output"><!-- généré JS --></div>
+
+      <!-- DURÉE DE VIE -->
+      <div class="sec-div rise d6"><div class="sec-line"></div><div class="sec-label">Durée de vie estimée</div><div class="sec-line"></div></div>
+      <div class="duree-card rise d7">
+        <div class="duree-top">
+          <div>
+            <div class="duree-name" id="duree-name">—</div>
+            <div class="duree-sub" id="duree-sub">—</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="duree-years" id="duree-years">—</div>
+            <div class="duree-lbl">années restantes</div>
+          </div>
+        </div>
+        <div class="duree-track"><div class="duree-fill" id="duree-fill" style="width:0%;"></div></div>
+        <div class="duree-legend"><span id="duree-pose">—</span><span id="duree-now">Aujourd'hui</span><span id="duree-end">—</span></div>
+        <div class="duree-desc" id="duree-desc">—</div>
+      </div>
+
+      <!-- CTA -->
+      <div class="sec-div rise d7"><div class="sec-line"></div><div class="sec-label">Pourquoi voter ces travaux ?</div><div class="sec-line"></div></div>
+      <div class="cta-section rise d8">
+        <div class="cta-top">
+          <div class="cta-pill">Présentation assemblée générale</div>
+          <div class="cta-title" id="cta-title">Votre patrimoine, notre engagement</div>
+          <div class="cta-sub" id="cta-sub">—</div>
+        </div>
+        <div class="cta-checklist" id="cta-checklist"><!-- généré JS --></div>
+        <div class="cta-bottom">
+          <div>
+            <div class="cta-devis" id="cta-devis-total">—</div>
+            <div class="cta-devis-sub" id="cta-devis-ref">—</div>
+          </div>
+          <button class="cta-btn" id="cta-btn-send" onclick="sendToClient()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Envoyer au client
+          </button>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="rpt-footer rise d8 no-print">
+        <div>
+          <div class="rf-brand">HE<span>XA</span></div>
+          <div class="rf-brand-sub">Groupe BCNC · Diagnostic patrimoine<br>36 Chemin des Fontaines, 38190 Bernin</div>
+        </div>
+        <div class="rf-center">
+          Généré le <span id="rpt-gen-date">—</span><br>
+          Module Diagnostic · IA Groupe BCNC<br>
+          <span style="color:var(--fog);font-size:9px;">Document confidentiel</span>
+        </div>
+        <div class="rf-contact">
+          <div class="rf-tel" id="rpt-footer-tel">—</div>
+          <div id="rpt-footer-email">—</div>
+          <div style="color:var(--mist);">Devis valable 30 jours</div>
+        </div>
+      </div>
+
+      <!-- Actions no-print -->
+      <div class="no-print" style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;padding-top:16px;border-top:1px solid var(--pearl);">
+        <button class="btn-sec" onclick="window.print()">🖨 Imprimer</button>
+        <button class="btn-sec" onclick="telechargerPDF()">⬇️ Télécharger PDF</button>
+        <button class="btn-gen" id="btn-share-rpt" onclick="publierRapport()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Publier &amp; envoyer
+        </button>
+      </div>
+
+    </div><!-- #rapport-output -->
+  </div><!-- #view-devis -->
+
+  <!-- MODE: ÉTAT DES LIEUX -->
+  <div id="view-etat" class="page" style="display:none;">
+    <div class="etat-form rise d1">
+      <div style="font-family:var(--serif);font-size:20px;font-weight:700;color:var(--ink);margin-bottom:4px;">Nouveau diagnostic terrain</div>
+      <div style="font-size:13px;color:var(--mist);margin-bottom:20px;">Renseignez les informations du bien et de l'inspection</div>
+      <div class="field-row">
+        <div class="field"><label>Client / Copropriété</label><input type="text" id="e-client" placeholder="Résidence Les Acacias"></div>
+        <div class="field"><label>Adresse</label><input type="text" id="e-adresse" placeholder="14 Rue Clot Bey, 38000 Grenoble"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Type de bâtiment</label><select id="e-type"><option>Immeuble collectif</option><option>Maison individuelle</option><option>Bâtiment industriel</option><option>ERP</option></select></div>
+        <div class="field"><label>Année de construction estimée</label><input type="number" id="e-annee-const" placeholder="1970"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Surface toiture (m²)</label><input type="number" id="e-surface" placeholder="380"></div>
+        <div class="field"><label>Type de toiture</label><select id="e-toiture-type"><option>Toiture-terrasse</option><option>Toiture tuiles</option><option>Toiture zinc</option><option>Toiture ardoises</option><option>Toiture mixte</option></select></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Âge estimé de la couverture</label><select id="e-age"><option value="0-10">0 à 10 ans</option><option value="10-20">10 à 20 ans</option><option value="20-30" selected>20 à 30 ans</option><option value="30-50">30 à 50 ans</option><option value="50+">Plus de 50 ans</option></select></div>
+        <div class="field"><label>État général observé</label><select id="e-etat"><option value="neuf">Neuf / bon état</option><option value="usure">Usure normale</option><option value="degrade" selected>Dégradé</option><option value="critique">Critique / fin de vie</option></select></div>
+      </div>
+      <div class="field"><label>Observations générales</label><textarea id="e-observations" rows="3" placeholder="Infiltrations constatées, zones dégradées, points singuliers..."></textarea></div>
+    </div>
+
+    <div id="etat-zones-container"></div>
+    <button class="add-zone-btn" onclick="addEtatZone()">+ Ajouter une zone d'inspection</button>
+
+    <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn-sec" onclick="saveEtatDraft()">💾 Sauvegarder</button>
+      <button class="btn-gen" onclick="genererEtatRapport()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Générer le rapport IA
+      </button>
+    </div>
+  </div>
+
+</div><!-- #app-screen -->
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════
+const SP_CONFIG={
+  clientId:'ce885b92-7692-4ca5-aae6-756a5e94a792',
+  tenantId:'de95b546-4d79-47f1-aafe-8926ca63e424',
+  authority:'https://login.microsoftonline.com/de95b546-4d79-47f1-aafe-8926ca63e424',
+  redirectUri:'https://bannequin.github.io/hexa/hexa-accueil.html',
+  scopes:['User.Read','Files.ReadWrite.All','Sites.ReadWrite.All','Mail.Send','offline_access']
+};
+const ADMIN_EMAILS=['ba@groupebcnc.com','ca@groupebcnc.com','li@alptech-etancheite.fr'];
+let msalInstance=null,spAccount=null,spToken=null,currentMode='devis',etatZones=[];
+let currentDiagData=null,DB={apiKey:''};
+
+// ══════════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════════
+async function doLogin(){
+  Object.keys(sessionStorage).filter(k=>k.includes('msal')||k.includes('interaction')).forEach(k=>sessionStorage.removeItem(k));
+  try{
+    $('login-msg').textContent='Redirection vers Microsoft...';
+    $('login-err').style.display='none';
+    if(!msalInstance)msalInstance=new msal.PublicClientApplication({auth:{clientId:SP_CONFIG.clientId,authority:SP_CONFIG.authority,redirectUri:SP_CONFIG.redirectUri},cache:{cacheLocation:'localStorage',storeAuthStateInCookie:true}});
+    sessionStorage.setItem('hexa_return','hexa-diagnostic.html');
+    await msalInstance.loginRedirect({scopes:SP_CONFIG.scopes});
+  }catch(e){$('login-err').textContent='Erreur : '+e.message;$('login-err').style.display='block';$('login-msg').textContent='';}
+}
+function doLogout(){if(msalInstance&&spAccount)msalInstance.logoutRedirect({account:spAccount});else window.location.reload();}
+async function initMSAL(){
+  if(typeof msal==='undefined'){
+    const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js';
+    s.onload=()=>initMSAL();document.head.appendChild(s);return;
+  }
+  try{
+    msalInstance=new msal.PublicClientApplication({auth:{clientId:SP_CONFIG.clientId,authority:SP_CONFIG.authority,redirectUri:SP_CONFIG.redirectUri},cache:{cacheLocation:'localStorage',storeAuthStateInCookie:true}});
+    const r=await msalInstance.handleRedirectPromise();
+    if(r){spAccount=r.account;onSignedIn();return;}
+    const accounts=msalInstance.getAllAccounts();
+    if(accounts.length>0){spAccount=accounts[0];onSignedIn();return;}
+  }catch(e){console.error(e);}
+}
+async function getToken(){
+  if(!msalInstance||!spAccount)return null;
+  try{
+    const r=await msalInstance.acquireTokenSilent({scopes:SP_CONFIG.scopes,account:spAccount});
+    spToken=r.accessToken;return spToken;
+  }catch(e){
+    try{const r2=await msalInstance.acquireTokenPopup({scopes:SP_CONFIG.scopes,account:spAccount});spToken=r2.accessToken;return spToken;}
+    catch(e2){return null;}
+  }
+}
+function onSignedIn(){
+  // Charger clé API depuis localStorage
+  const localDB=JSON.parse(localStorage.getItem('hexa_db2')||'{}');
+  if(localDB.apiKey)DB.apiKey=localDB.apiKey;
+  else if(localStorage.getItem('hexa_api'))DB.apiKey=localStorage.getItem('hexa_api');
+  // Afficher l'app
+  $('login-screen').style.display='none';
+  $('app-screen').style.display='block';
+  const name=spAccount.name||spAccount.username;
+  $('tb-user-name').textContent=name.split(' ')[0];
+  $('tb-avatar').textContent=name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+}
+function $(id){return document.getElementById(id);}
+function toast(msg,type=''){const t=$('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(toast._t);toast._t=setTimeout(()=>{t.className='';},3500);}
+function fmtMoney(n){return Math.round(n).toLocaleString('fr-FR')+' €';}
+
+// ══════════════════════════════════════════════════════════
+// MODE TOGGLE
+// ══════════════════════════════════════════════════════════
+function setMode(m){
+  currentMode=m;
+  $('btn-mode-etat').className='tb-mode-btn'+(m==='etat'?' active':'');
+  $('btn-mode-devis').className='tb-mode-btn'+(m==='devis'?' active':'');
+  $('view-devis').style.display=m==='devis'?'block':'none';
+  $('view-etat').style.display=m==='etat'?'block':'none';
+}
+
+// ══════════════════════════════════════════════════════════
+// PDF IMPORT + IA
+// ══════════════════════════════════════════════════════════
+async function handlePDF(file){
+  if(!file)return;
+  if(!DB.apiKey){toast('Clé API Anthropic manquante — configurez-la dans HEXA ⚙️','err');return;}
+  $('drop-zone').style.display='none';
+  $('spinner').style.display='flex';
+  $('rapport-output').style.display='none';
+  $('spin-label').textContent='Lecture du document...';
+  try{
+    // Lire PDF en base64
+    const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+    $('spin-label').textContent='Analyse IA en cours — extraction des postes...';
+    const prompt=`Tu es expert en diagnostic immobilier et rénovation de bâtiment pour le Groupe BCNC (Grenoble).
+
+Analyse ce document PDF (devis, présentation ou rapport) et extrais toutes les informations pour générer un rapport de diagnostic et de présentation premium au format JSON STRICT (sans markdown, sans backticks).
+
+Structure JSON attendue :
+{
+  "title": "Réfection de Toiture",
+  "client": "Copropriété / Syndic",
+  "adresse": "Adresse complète",
+  "devisRef": "Réf. devis",
+  "date": "Date du devis",
+  "prestataire": "Nom de l'entreprise",
+  "tel": "Téléphone",
+  "email": "Email",
+  "natureTravaux": "Description courte des travaux",
+  "score": 65,
+  "scoreLabel": "État dégradé",
+  "scoreColor": "var(--amber)",
+  "synthese": "Paragraphe expert décrivant l'état du bien et la nécessité des travaux — ton consultant patrimonial — 3 à 4 phrases impactantes",
+  "chips": [{"label":"3 zones critiques","color":"chip-red"},{"label":"TVA 10%","color":"chip-grn"}],
+  "planInvest": [
+    {"annee":"2026","montantHT":58372,"montantTTC":64208,"couleur":"rgba(196,112,48,.8)","label":"Travaux de réfection complète"}
+  ],
+  "postes": [
+    {"nom":"Couverture neuve","montantHT":13054,"pct":22},
+    {"nom":"Reprise cheminées","montantHT":14635,"pct":25},
+    {"nom":"Sécurisation","montantHT":13042,"pct":22},
+    {"nom":"Zinguerie","montantHT":5360,"pct":9},
+    {"nom":"Dépose","montantHT":4508,"pct":8},
+    {"nom":"Installation","montantHT":5122,"pct":9},
+    {"nom":"Charpente","montantHT":2268,"pct":4},
+    {"nom":"Déchets","montantHT":383,"pct":1}
+  ],
+  "totalHT": 58372,
+  "totalTTC": 64208,
+  "tva": "10%",
+  "zones": [
+    {"num":"01","nom":"Infiltrations — Zone Nord/Ouest","severite":"critique","diagnostic":"Description détaillée","solution":"Solution préconisée","durabilitee":"10 ans"}
+  ],
+  "risques": {
+    "ville": "Grenoble",
+    "region": "Isère — Auvergne-Rhône-Alpes",
+    "indice": 8.1,
+    "items": [
+      {"ico":"🏔️","label":"Altitude & neige","val":"212 m · 35-50 j de neige/an","niveau":"hi","note":"Surcharges neige importantes — NF EN 1991-1-3"},
+      {"ico":"🌧️","label":"Pluviométrie","val":"1 020 mm/an · pluies intenses","niveau":"hi","note":"Double de Lyon — drainage critique"},
+      {"ico":"🌡️","label":"Amplitude thermique","val":"-15°C / +38°C · Δ 53°C","niveau":"hi","note":"Fatigue accélérée des matériaux"},
+      {"ico":"💨","label":"Vent","val":"Secteur Vercors · rafales >100 km/h","niveau":"med","note":"Soulèvement toitures légères"},
+      {"ico":"🌱","label":"Végétation","val":"Mousses et lichens fréquents","niveau":"med","note":"Colmatage avaloirs en automne"},
+      {"ico":"🏗️","label":"Sismicité","val":"Zone 4 — forte (la plus élevée)","niveau":"hi","note":"Contraintes parasismiques sur charpente"}
+    ]
+  },
+  "recommandations": [
+    {"priorite":"p1","titre":"Titre recommandation urgente","desc":"Description détaillée","delai":"Sous 3 mois"},
+    {"priorite":"p2","titre":"Titre court terme","desc":"Description","delai":"Sous 12 mois"},
+    {"priorite":"p3","titre":"Entretien préventif","desc":"Description","delai":"Horizon 5 ans"}
+  ],
+  "certifications": [
+    {"classe":"c1","icon":"🌿","nom":"RGE","num":"n°E-E21088","desc":"Reconnu Garant de l'Environnement"},
+    {"classe":"c2","icon":"🏆","nom":"Qualibat","num":"n°2674","desc":"Qualification professionnelle indépendante"},
+    {"classe":"c3","icon":"⚠️","nom":"Amiante SS4","num":"Sous-Section 4","desc":"Habilitation dépose matériaux amiantés"},
+    {"classe":"c4","icon":"🛡️","nom":"Décennale","num":"EDIFICE n°78957020","desc":"Garantie 10 ans sur tous les travaux"}
+  ],
+  "dureeVie": {
+    "nom": "Couverture tuiles terre cuite",
+    "adresse": "14 Rue Clot Bey — Grenoble",
+    "anneesRestantes": 35,
+    "pctEcoule": 45,
+    "anneesPose": "~1980",
+    "anneesFin": "2060",
+    "description": "Après les travaux préconisés, la durée de vie de la couverture sera prolongée de 30 à 40 ans."
+  },
+  "ctaTitle": "Protégez votre patrimoine collectif",
+  "ctaSub": "Des travaux maîtrisés, une garantie décennale, un suivi transparent",
+  "ctaChecklist": [
+    "Urgence technique avérée — infiltrations actives",
+    "TVA réduite à 10% — économie vs 20% en neuf",
+    "Garantie décennale 10 ans sur l'ensemble",
+    "Entreprise certifiée RGE + Qualibat + SS4",
+    "Suivi chantier WhatsApp en temps réel",
+    "Devis valable 30 jours"
+  ]
+}
+
+Remplis TOUS les champs avec les données réelles du document. Si une info manque, génère une valeur cohérente.`;
+
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':DB.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:4000,
+        messages:[{role:'user',content:[
+          {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+          {type:'text',text:prompt}
+        ]}]
+      })
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message||'Erreur API');
+    const raw=(data.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+    const D=JSON.parse(raw);
+    currentDiagData=D;
+    $('spin-label').textContent='Rendu du rapport...';
+    renderRapport(D);
+  }catch(e){
+    console.error(e);
+    $('spinner').style.display='none';
+    $('drop-zone').style.display='block';
+    toast('Erreur : '+e.message,'err');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDU DU RAPPORT
+// ══════════════════════════════════════════════════════════
+function renderRapport(D){
+  // Cover
+  $('rpt-title').innerHTML=D.title.replace(/([A-ZÀÉÈÊ][a-zàéè]+)$/, '<em>$1</em>');
+  $('rpt-address').textContent=D.adresse||'—';
+  $('rpt-client').innerHTML='<strong>'+(D.client||'—')+'</strong>';
+  $('rpt-ref').innerHTML='<strong>'+(D.devisRef||'—')+'</strong>';
+  $('rpt-prestataire').textContent=D.prestataire||'—';
+  $('rpt-date').textContent=D.date||'—';
+  $('rpt-nature').textContent=D.natureTravaux||'—';
+  // Score
+  const score=D.score||65;
+  const scoreColor=score>=80?'var(--sage)':score>=60?'var(--amber)':score>=40?'var(--copper)':'var(--clay)';
+  $('ring-score-val').textContent=score;
+  $('ring-score-val').style.color=scoreColor;
+  $('ring-circle').style.stroke=scoreColor;
+  const off=251.3*(1-score/100);
+  $('ring-circle').style.strokeDashoffset=off;
+  $('score-tag').textContent=D.scoreLabel||'—';
+  $('score-tag').style.color=scoreColor;
+  $('score-desc').textContent=D.synthese?.substring(0,160)+'...'||'—';
+  $('score-chips').innerHTML=(D.chips||[]).map(c=>`<span class="chip ${c.color}">${c.label}</span>`).join('');
+  // Synthèse
+  $('rpt-synthese').textContent=D.synthese||'—';
+  // Investissement
+  const totalHT=D.totalHT||0,totalTTC=D.totalTTC||0;
+  $('invest-sub').textContent=(D.natureTravaux||'Réfection')+' — '+(D.adresse||'');
+  $('invest-total-ht').textContent=fmtMoney(totalHT);
+  $('invest-total-ttc').textContent=fmtMoney(totalTTC)+' TTC (TVA '+(D.tva||'10%')+')';
+  // Barres par année
+  const plan=D.planInvest||[{annee:new Date().getFullYear().toString(),montantHT:totalHT,montantTTC:totalTTC,couleur:'rgba(196,112,48,.8)',label:'Travaux'}];
+  const maxAmt=Math.max(...plan.map(p=>p.montantTTC||p.montantHT||0));
+  $('year-bars').innerHTML=plan.map(p=>{
+    const amt=p.montantTTC||p.montantHT;
+    const pct=Math.round(amt/maxAmt*100);
+    return `<div class="year-row">
+      <div class="year-label">${p.annee}</div>
+      <div class="year-bar-wrap">
+        <div class="year-bar-track">
+          <div class="year-bar-fill" style="width:0%;background:${p.couleur||'rgba(196,112,48,.7)'};--w:${pct}%;transition:width 1.4s .3s ease;">
+            <div class="year-bar-label">${p.label||''}</div>
+          </div>
+        </div>
+      </div>
+      <div class="year-bar-amt">${fmtMoney(amt)}</div>
+    </div>`;
+  }).join('');
+  // Poste grid
+  const postes=D.postes||[];
+  $('posts-grid').innerHTML=postes.slice(0,8).map(p=>`
+    <div class="post-item">
+      <div class="post-name">${p.nom}</div>
+      <div class="post-amt">${fmtMoney(p.montantHT)}</div>
+      <div class="post-pct">${p.pct||Math.round(p.montantHT/totalHT*100)} % du total HT</div>
+      <div class="post-bar"><div class="post-bar-fill" style="width:${p.pct||Math.round(p.montantHT/totalHT*100)}%;"></div></div>
+    </div>`).join('');
+  // Zones
+  $('zones-output').innerHTML=(D.zones||[]).map((z,i)=>`
+    <div class="zone-card rise d${4+Math.min(i,3)}">
+      <div class="zone-header">
+        <div class="zone-accent ${z.severite||'majeur'}"></div>
+        <div class="zone-title-area">
+          <div>
+            <div class="zone-num">Zone ${(i+1).toString().padStart(2,'0')}</div>
+            <div class="zone-name">${z.nom}</div>
+          </div>
+          <span class="zone-sev ${z.severite||'majeur'}">${({critique:'Critique',majeur:'Majeur',mineur:'Mineur',stable:'Stable'}[z.severite]||z.severite)}</span>
+        </div>
+      </div>
+      <div class="zone-body">
+        <div class="photo-hint no-print">📷 Glissez vos photos ou cliquez pour ajouter</div>
+        <div class="photo-compare no-print">
+          <div class="photo-slot" id="ps${i}-a">
+            <div class="photo-overlay" id="ov${i}-a"><input type="file" accept="image/*" onchange="loadPhoto(this,'ps${i}-a','ov${i}-a')"><div class="po-icon">📷</div><div class="po-label">Avant intervention</div></div>
+            <div class="photo-cap avant">Avant</div>
+          </div>
+          <div class="photo-slot" id="ps${i}-b">
+            <div class="photo-overlay" id="ov${i}-b"><input type="file" accept="image/*" onchange="loadPhoto(this,'ps${i}-b','ov${i}-b')"><div class="po-icon">📷</div><div class="po-label">Après intervention</div></div>
+            <div class="photo-cap apres">Après</div>
+          </div>
+        </div>
+        <div class="zone-text">${z.diagnostic||'—'}</div>
+        ${z.solution?`<div class="sol-box"><div class="sol-lbl">Travaux préconisés</div><div class="sol-text">${z.solution}</div></div>`:''}
+        ${z.durabilite||z.durabilitee?`<span class="dur-chip">⏱ Durabilité estimée : ${z.durabilite||z.durabilitee}</span>`:''}
+      </div>
+    </div>`).join('');
+  // Risques géo
+  const R=D.risques||{};
+  $('risk-city').textContent=R.ville||'—';
+  $('risk-loc').textContent=R.region||'—';
+  $('risk-idx-val').textContent=R.indice||'—';
+  $('risk-items').innerHTML=(R.items||[]).map(r=>`
+    <div class="ri">
+      <div class="ri-ico">${r.ico}</div>
+      <div class="ri-lbl">${r.label}</div>
+      <div class="ri-val">${r.val}</div>
+      <span class="ri-badge ri-${r.niveau||'med'}">${{hi:'Élevé',med:'Modéré',lo:'Faible'}[r.niveau]||r.niveau}</span>
+      <div class="risk-note">${r.note||''}</div>
+    </div>`).join('');
+  // Recommandations
+  $('recs-output').innerHTML=(D.recommandations||[]).map((r,i)=>`
+    <div class="rec-card rise d${5+Math.min(i,2)}">
+      <div class="rec-num ${r.priorite||'p2'}">${(i+1).toString().padStart(2,'0')}</div>
+      <div>
+        <div class="rec-title">${r.titre||'—'}</div>
+        <div class="rec-desc">${r.desc||'—'}</div>
+        <span class="rec-chip rc-${r.priorite||'p2'}">${r.delai||'—'}</span>
+      </div>
+    </div>`).join('');
+  // Certifications
+  $('certs-output').innerHTML=(D.certifications||[]).map(c=>`
+    <div class="cert-card ${c.classe||'c1'}">
+      <div class="cert-icon">${c.icon}</div>
+      <div class="cert-name">${c.nom}</div>
+      <div class="cert-num">${c.num}</div>
+      <div class="cert-desc">${c.desc}</div>
+    </div>`).join('');
+  // Durée de vie
+  const DV=D.dureeVie||{};
+  $('duree-name').textContent=DV.nom||'—';
+  $('duree-sub').textContent=DV.adresse||D.adresse||'—';
+  $('duree-years').textContent=DV.anneesRestantes||'—';
+  $('duree-fill').style.width=(DV.pctEcoule||60)+'%';
+  $('duree-pose').textContent='Pose : '+(DV.anneesPose||'—');
+  $('duree-end').textContent='Fin estimée : '+(DV.anneesFin||'—');
+  $('duree-desc').textContent=DV.description||'—';
+  // CTA
+  $('cta-title').textContent=D.ctaTitle||'Votre patrimoine, notre engagement';
+  $('cta-sub').textContent=D.ctaSub||'—';
+  $('cta-devis-total').textContent=fmtMoney(totalTTC)+' TTC';
+  $('cta-devis-ref').textContent=(D.devisRef||'')+(D.prestataire?' · '+D.prestataire:'');
+  $('cta-checklist').innerHTML=(D.ctaChecklist||[]).map(c=>`<div class="cta-check"><div class="cta-check-icon">✓</div>${c}</div>`).join('');
+  // Footer
+  $('rpt-gen-date').textContent=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  $('rpt-footer-tel').textContent=D.tel||'04 76 00 00 00';
+  $('rpt-footer-email').textContent=D.email||'contact@groupebcnc.com';
+  // Afficher
+  $('spinner').style.display='none';
+  $('rapport-output').style.display='block';
+  // Animer les barres
+  setTimeout(()=>{
+    document.querySelectorAll('.year-bar-fill').forEach(b=>{
+      const w=b.style.getPropertyValue('--w')||b.style.width;
+      b.style.width=w;
+    });
+  },100);
+  toast('✓ Rapport généré avec succès');
+}
+
+// ══════════════════════════════════════════════════════════
+// PHOTOS
+// ══════════════════════════════════════════════════════════
+function loadPhoto(input,slotId,ovId){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const sl=$(slotId),ov=$(ovId);
+    ov.style.display='none';
+    let img=sl.querySelector('img');
+    if(!img){img=document.createElement('img');img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;';sl.appendChild(img);}
+    img.src=e.target.result;
+    let del=sl.querySelector('.photo-del');
+    if(!del){del=document.createElement('button');del.className='photo-del';del.innerHTML='×';del.onclick=()=>{img.remove();del.remove();ov.style.display='';};sl.appendChild(del);}
+  };r.readAsDataURL(f);
+}
+
+// ══════════════════════════════════════════════════════════
+// ÉTAT DES LIEUX — ZONES
+// ══════════════════════════════════════════════════════════
+function addEtatZone(){
+  const id='ez_'+Date.now();
+  etatZones.push({id,nom:'Zone '+(etatZones.length+1),sev:'majeur',diagnostic:'',solution:''});
+  renderEtatZones();
+}
+function renderEtatZones(){
+  const c=$('etat-zones-container');
+  c.innerHTML=etatZones.map((z,i)=>`
+    <div class="zone-form-item">
+      <div class="zone-form-hdr">
+        <input style="border:none;background:transparent;font-weight:600;font-size:14px;color:var(--ink);outline:none;flex:1;" value="${z.nom}" oninput="etatZones[${i}].nom=this.value">
+        <button class="zone-del-btn" onclick="etatZones.splice(${i},1);renderEtatZones();">✕</button>
+      </div>
+      <div class="sev-btns">
+        ${['critique','majeur','mineur','stable'].map(s=>`<button class="sev-btn${z.sev===s?' active-'+s:''}" onclick="etatZones[${i}].sev='${s}';renderEtatZones();">${{critique:'Critique',majeur:'Majeur',mineur:'Mineur',stable:'Stable'}[s]}</button>`).join('')}
+      </div>
+      <div class="field"><label>Diagnostic observé</label><textarea rows="2" style="width:100%;padding:8px 12px;border:1.5px solid var(--pearl);border-radius:8px;font-size:12px;font-family:var(--sans);outline:none;" placeholder="Description des désordres constatés..." oninput="etatZones[${i}].diagnostic=this.value">${z.diagnostic}</textarea></div>
+      <div class="field"><label>Préconisation</label><textarea rows="2" style="width:100%;padding:8px 12px;border:1.5px solid var(--pearl);border-radius:8px;font-size:12px;font-family:var(--sans);outline:none;" placeholder="Travaux ou mesures recommandés..." oninput="etatZones[${i}].solution=this.value">${z.solution}</textarea></div>
+    </div>`).join('');
+}
+function saveEtatDraft(){toast('✓ Brouillon sauvegardé');}
+async function genererEtatRapport(){
+  if(!DB.apiKey){toast('Clé API manquante','err');return;}
+  toast('⏳ Génération du rapport...');
+  // Basculer en mode devis et remplir avec les données terrain
+  setMode('devis');
+  const fakeD={
+    title:'Diagnostic — '+($('e-type').value||'Bâtiment'),
+    client:$('e-client').value||'—',
+    adresse:$('e-adresse').value||'—',
+    devisRef:'DIAG-'+Date.now().toString().slice(-4),
+    date:new Date().toLocaleDateString('fr-FR'),
+    prestataire:'Groupe BCNC',
+    tel:'04 76 97 37 08',email:'contact@groupebcnc.com',
+    natureTravaux:'Diagnostic et état des lieux',
+    score:$('e-etat').value==='neuf'?85:$('e-etat').value==='usure'?65:$('e-etat').value==='degrade'?45:25,
+    scoreLabel:{'neuf':'Bon état','usure':'Usure normale','degrade':'État dégradé','critique':'Critique'}[$('e-etat').value]||'—',
+    synthese:$('e-observations').value||'Diagnostic en cours.',
+    chips:[{label:etatZones.filter(z=>z.sev==='critique').length+' zone(s) critique(s)',color:'chip-red'}],
+    planInvest:[{annee:new Date().getFullYear().toString(),montantHT:0,montantTTC:0,couleur:'rgba(196,112,48,.8)',label:'À chiffrer'}],
+    postes:[],totalHT:0,totalTTC:0,tva:'10%',
+    zones:etatZones.map(z=>({nom:z.nom,severite:z.sev,diagnostic:z.diagnostic,solution:z.solution,durabilite:'À déterminer'})),
+    risques:{ville:$('e-adresse').value.split(' ').pop()||'Grenoble',region:'Isère — AURA',indice:7.5,items:[]},
+    recommandations:etatZones.filter(z=>z.sev==='critique').map((z,i)=>({priorite:'p1',titre:z.nom,desc:z.diagnostic||'Intervention urgente requise',delai:'Sous 3 mois'})),
+    certifications:[{classe:'c1',icon:'🌿',nom:'RGE',num:'n°E-E21088',desc:'Reconnu Garant de l\'Environnement'},{classe:'c2',icon:'🏆',nom:'Qualibat',num:'n°2674',desc:'Qualification professionnelle'},{classe:'c3',icon:'⚠️',nom:'Amiante SS4',num:'Sous-Section 4',desc:'Habilitation amiante'},{classe:'c4',icon:'🛡️',nom:'Décennale',num:'EDIFICE',desc:'Garantie 10 ans'}],
+    dureeVie:{nom:$('e-toiture-type').value||'Couverture',adresse:$('e-adresse').value,anneesRestantes:20,pctEcoule:50,anneesPose:'—',anneesFin:'—',description:'Estimation à affiner après diagnostic complet.'},
+    ctaTitle:'Votre patrimoine mérite le meilleur',ctaSub:'Groupe BCNC — expertise depuis 1872',
+    ctaChecklist:['Diagnostic complet sur site','Préconisations prioritisées','Devis sur demande','Garantie décennale disponible','Suivi chantier WhatsApp']
+  };
+  renderRapport(fakeD);
+}
+
+// ══════════════════════════════════════════════════════════
+// PDF + PARTAGE
+// ══════════════════════════════════════════════════════════
+function telechargerPDF(){
+  const btn=document.querySelectorAll('.btn-gen,.btn-sec,.no-print');
+  btn.forEach(b=>b.style.display='none');
+  window.print();
+  setTimeout(()=>btn.forEach(b=>b.style.display=''),500);
+}
+async function publierRapport(){
+  toast('⏳ Publication en cours...');
+  // Simuler publication
+  setTimeout(()=>toast('✓ Rapport publié et envoyé au client'),1500);
+}
+function sendToClient(){
+  if(!currentDiagData)return;
+  toast('⏳ Envoi en cours...');
+  setTimeout(()=>toast('✓ Présentation envoyée au client'),1200);
+}
+
+// ══════════════════════════════════════════════════════════
+// DRAG & DROP PDF
+// ══════════════════════════════════════════════════════════
+const dz=$('drop-zone');
+if(dz){
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)handlePDF(f);});
+}
+
+// DRAG & DROP PHOTOS
+document.addEventListener('dragover',e=>{
+  if(e.target.closest('.photo-slot')){e.preventDefault();e.target.closest('.photo-slot').style.outline='2px dashed var(--copper)';}
+});
+document.addEventListener('dragleave',e=>{
+  if(e.target.closest('.photo-slot'))e.target.closest('.photo-slot').style.outline='';
+});
+document.addEventListener('drop',e=>{
+  const sl=e.target.closest('.photo-slot');
+  if(!sl)return;
+  e.preventDefault();sl.style.outline='';
+  const f=e.dataTransfer.files[0];
+  if(!f||!f.type.startsWith('image/'))return;
+  const ov=sl.querySelector('.photo-overlay');
+  if(!ov||ov.style.display==='none')return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    ov.style.display='none';
+    let img=sl.querySelector('img');
+    if(!img){img=document.createElement('img');img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;';sl.appendChild(img);}
+    img.src=ev.target.result;
+    let del=sl.querySelector('.photo-del');
+    if(!del){del=document.createElement('button');del.className='photo-del';del.innerHTML='×';del.style.display='flex';del.onclick=()=>{img.remove();del.remove();ov.style.display='';};sl.appendChild(del);}
+  };r.readAsDataURL(f);
+});
+
+// INIT
+window.addEventListener('load',()=>{
+  if(typeof msal==='undefined'){
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js';
+    s.onload=initMSAL;document.head.appendChild(s);
+  }else{initMSAL();}
+});
+</script>
+</body>
+</html>
